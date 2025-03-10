@@ -9,6 +9,7 @@ module Msf::Payload::Linux::Prepends
 
   def register_prepend_options
     all_options = {
+      'PrependMigrate' => [false, 'Prepend a stub that injects the payload into existing process', 'false'],
       'PrependFork' => [false, 'Prepend a stub that starts the payload in its own process via fork', 'false'],
       'PrependSetresuid' => [false, 'Prepend a stub that executes the setresuid(0, 0, 0) system call', 'false'],
       'PrependSetreuid' => [false, 'Prepend a stub that executes the setreuid(0, 0) system call', 'false'],
