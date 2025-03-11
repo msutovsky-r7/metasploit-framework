@@ -2,7 +2,10 @@
 # Linux x64 Prepends file
 #
 module Msf::Payload::Linux::X64::Prepends
+  
   include Msf::Payload::Linux::Prepends
+  include Msf::Payload::Linux::X64::PrependMigrate
+
   def prepends_order
     %w[PrependFork PrependSetresuid PrependSetreuid PrependSetuid]
   end
