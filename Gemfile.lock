@@ -1,7 +1,11 @@
 PATH
   remote: .
   specs:
+<<<<<<< HEAD
     metasploit-framework (6.4.123)
+=======
+    metasploit-framework (6.4.101)
+>>>>>>> 51974d680a (Support for structured migrate command)
       aarch64
       abbrev
       actionpack (~> 7.2.0)
@@ -46,9 +50,15 @@ PATH
       metasploit-concern
       metasploit-credential
       metasploit-model
+<<<<<<< HEAD
       metasploit-payloads (= 2.0.240)
       metasploit_data_models (>= 6.0.15)
       metasploit_payloads-mettle (= 1.0.46)
+=======
+      metasploit-payloads (= 2.0.237)
+      metasploit_data_models (>= 6.0.7)
+      metasploit_payloads-mettle (= 1.0.45)
+>>>>>>> 51974d680a (Support for structured migrate command)
       mqtt
       msgpack (~> 1.6.0)
       mutex_m
@@ -352,8 +362,13 @@ GEM
       drb
       mutex_m
       railties (~> 7.0)
+<<<<<<< HEAD
     metasploit-payloads (2.0.240)
     metasploit_data_models (6.0.15)
+=======
+    metasploit-payloads (2.0.237)
+    metasploit_data_models (6.0.9)
+>>>>>>> 51974d680a (Support for structured migrate command)
       activerecord (~> 7.0)
       activesupport (~> 7.0)
       arel-helpers
@@ -489,7 +504,11 @@ GEM
       http-cookie (>= 1.0.2, < 2.0)
       mime-types (>= 1.16, < 4.0)
       netrc (~> 0.8)
+<<<<<<< HEAD
     rex-arch (0.1.19)
+=======
+    rex-arch (0.1.18)
+>>>>>>> 51974d680a (Support for structured migrate command)
       rex-text
     rex-bin_tools (0.1.10)
       metasm
