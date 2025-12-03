@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    metasploit-framework (6.4.95)
+    metasploit-framework (6.4.101)
       aarch64
       abbrev
       actionpack (~> 7.2.0)
@@ -21,6 +21,7 @@ PATH
       bson
       chunky_png
       csv
+      date (= 3.4.1)
       dnsruby
       drb
       ed25519
@@ -45,7 +46,7 @@ PATH
       metasploit-concern
       metasploit-credential
       metasploit-model
-      metasploit-payloads (= 2.0.234)
+      metasploit-payloads (= 2.0.237)
       metasploit_data_models (>= 6.0.7)
       metasploit_payloads-mettle (= 1.0.45)
       mqtt
@@ -78,6 +79,7 @@ PATH
       recog
       redcarpet
       reline
+      rest-client
       rex-arch
       rex-bin_tools
       rex-core
@@ -96,6 +98,7 @@ PATH
       rex-struct2
       rex-text
       rex-zip
+      rexml (= 3.4.1)
       rinda
       ruby-macho
       ruby-mysql
@@ -283,6 +286,7 @@ GEM
     hrr_rb_ssh-ed25519 (0.4.2)
       ed25519 (~> 1.2)
       hrr_rb_ssh (>= 0.4)
+    http-accept (1.7.0)
     http-cookie (1.0.8)
       domain_name (~> 0.5)
     http_parser.rb (0.8.0)
@@ -348,7 +352,7 @@ GEM
       drb
       mutex_m
       railties (~> 7.0)
-    metasploit-payloads (2.0.234)
+    metasploit-payloads (2.0.237)
     metasploit_data_models (6.0.9)
       activerecord (~> 7.0)
       activesupport (~> 7.0)
@@ -367,7 +371,8 @@ GEM
     mime-types-data (3.2025.0924)
     mini_portile2 (2.8.9)
     minitest (5.25.5)
-    mqtt (0.6.0)
+    mqtt (0.7.0)
+      logger
     msgpack (1.6.1)
     multi_json (1.15.0)
     mustermann (3.0.3)
@@ -385,6 +390,7 @@ GEM
     net-smtp (0.5.1)
       net-protocol
     net-ssh (7.3.0)
+    netrc (0.11.0)
     network_interface (0.0.4)
     nexpose (7.3.0)
     nio4r (2.7.4)
@@ -475,6 +481,11 @@ GEM
     reline (0.6.2)
       io-console (~> 0.5)
     require_all (3.0.0)
+    rest-client (2.1.0)
+      http-accept (>= 1.7.0, < 2.0)
+      http-cookie (>= 1.0.2, < 2.0)
+      mime-types (>= 1.16, < 4.0)
+      netrc (~> 0.8)
     rex-arch (0.1.18)
       rex-text
     rex-bin_tools (0.1.10)
@@ -529,7 +540,7 @@ GEM
       bigdecimal
     rex-zip (0.1.6)
       rex-text
-    rexml (3.4.4)
+    rexml (3.4.1)
     rinda (0.2.0)
       drb
       forwardable
