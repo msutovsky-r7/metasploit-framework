@@ -11,8 +11,6 @@ require 'rex/post/meterpreter/client'
 require 'rex/socket/x509_certificate'
 
 require 'openssl'
-require 'pry'
-require 'pry-byebug'
 
 module Rex
 module Post
@@ -648,9 +646,8 @@ class ClientCore < Extension
       raise RuntimeError, 'Cannot migrate into current process', caller
     end
 
-    binding.pry
-    migrate_stub = generate_migrate_stub(target_process)
     migrate_payload = generate_migrate_payload(target_process)
+    migrate_stub = generate_migrate_stub(target_process, migrate_payload.length)
 
     # Build the migration request
     request = Packet.create_request(COMMAND_ID_CORE_MIGRATE)
@@ -826,7 +823,7 @@ private
   # Generate a migrate stub that is specific to the current transport type and the
   # target process.
   #
-  def generate_migrate_stub(target_process)
+  def generate_migrate_stub(target_process, payload_length=nil)
     stub = nil
 
     if client.platform == 'windows' && [ARCH_X86, ARCH_X64].include?(client.arch)
@@ -869,7 +866,7 @@ private
       else
         c.include(::Msf::Payload::Linux::X64::Migrate)
       end
-      stub = c.new().generate
+      stub = c.new().generate(opts={"payload_length":payload_length})
     else
       raise RuntimeError, "Unsupported session #{client.session_type}"
     end
