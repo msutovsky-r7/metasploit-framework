@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    metasploit-framework (6.4.101)
+    metasploit-framework (6.4.95)
       aarch64
       abbrev
       actionpack (~> 7.2.0)
@@ -48,7 +48,7 @@ PATH
       metasploit-model
       metasploit-payloads (= 2.0.237)
       metasploit_data_models (>= 6.0.7)
-      metasploit_payloads-mettle (= 1.0.45)
+      metasploit_payloads-mettle (= 1.0.43.2.pre.dev)
       mqtt
       msgpack (~> 1.6.0)
       mutex_m
@@ -363,7 +363,7 @@ GEM
       railties (~> 7.0)
       recog
       webrick
-    metasploit_payloads-mettle (1.0.45)
+    metasploit_payloads-mettle (1.0.43.2.pre.dev)
     method_source (1.1.0)
     mime-types (3.7.0)
       logger
