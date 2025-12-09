@@ -1,11 +1,7 @@
 PATH
   remote: .
   specs:
-<<<<<<< HEAD
     metasploit-framework (6.4.123)
-=======
-    metasploit-framework (6.4.101)
->>>>>>> 51974d680a (Support for structured migrate command)
       aarch64
       abbrev
       actionpack (~> 7.2.0)
@@ -57,8 +53,12 @@ PATH
 =======
       metasploit-payloads (= 2.0.237)
       metasploit_data_models (>= 6.0.7)
+<<<<<<< HEAD
       metasploit_payloads-mettle (= 1.0.45)
 >>>>>>> 51974d680a (Support for structured migrate command)
+=======
+      metasploit_payloads-mettle (= 1.0.43.2.pre.dev)
+>>>>>>> 2c5c5d9c68 (Fixes stage loading)
       mqtt
       msgpack (~> 1.6.0)
       mutex_m
@@ -381,7 +381,11 @@ GEM
       railties (~> 7.0)
       recog
       webrick
+<<<<<<< HEAD
     metasploit_payloads-mettle (1.0.46)
+=======
+    metasploit_payloads-mettle (1.0.43.2.pre.dev)
+>>>>>>> 2c5c5d9c68 (Fixes stage loading)
     method_source (1.1.0)
     mime-types (3.7.0)
       logger
