@@ -3,12 +3,6 @@
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-###
-#
-# This sample auxiliary module simply displays the selected action and
-# registers a custom command that will show up when the module is used.
-#
-###
 class MetasploitModule < Msf::Auxiliary
 
   include Msf::Exploit::Remote::HttpClient
