@@ -23,6 +23,9 @@ gem 'rex-text'
 
 require 'rex'
 
+require 'pry'
+require 'pry-byebug'
+
 # Initialize the simplified framework instance.
 framework = Msf::Simple::Framework.create('DisableDatabase' => true)
 exceptions = []
@@ -32,6 +35,8 @@ framework.payloads.each_module do |name, mod|
     mod_inst = framework.payloads.create(name)
     #mod_inst.datastore.merge!(framework.datastore)
     next if mod_inst.is_a?(Msf::Payload::Adapter) || Msf::Util::PayloadCachedSize.is_cached_size_accurate?(mod_inst)
+    binding.pry if name == "python/meterpreter/bind_tcp"
+    puts name
     $stdout.puts "[*] Updating the CacheSize for #{mod.file_path}..."
     Msf::Util::PayloadCachedSize.update_module_cached_size(mod_inst)
   rescue => e
