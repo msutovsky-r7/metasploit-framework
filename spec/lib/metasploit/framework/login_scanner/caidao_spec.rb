@@ -31,7 +31,7 @@ RSpec.describe Metasploit::Framework::LoginScanner::Caidao do
           allow(subject).to receive(:uri).and_return('asp')
         end
 
-        it 'returns true' do
+        it 'returns false' do
           expect(subject.check_setup).to be(false)
         end
 
@@ -46,7 +46,7 @@ RSpec.describe Metasploit::Framework::LoginScanner::Caidao do
           allow(subject).to receive(:uri).and_return('aspx')
         end
 
-        it 'returns true' do
+        it 'returns false' do
           expect(subject.check_setup).to be(false)
         end
 
@@ -61,7 +61,7 @@ RSpec.describe Metasploit::Framework::LoginScanner::Caidao do
           allow(subject).to receive(:uri).and_return('html')
         end
 
-        it 'returns false' do
+        it 'returns failure details' do
           expect(subject.check_setup).to eq("Unable to locate target extension in uri. (Is this really caidao?)")
         end
 

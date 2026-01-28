@@ -25,7 +25,7 @@ module Metasploit
             # if we successfully get the version
             if res_json['version']
               # report the version
-              print_brute(level: :good, ip: ip, msg: "Softing Secure Integration Server #{res_json['version']}")
+              framework_module.print_brute(level: :good, ip: ip, msg: "Softing Secure Integration Server #{res_json['version']}") if framework_module
               return false
             end
           end

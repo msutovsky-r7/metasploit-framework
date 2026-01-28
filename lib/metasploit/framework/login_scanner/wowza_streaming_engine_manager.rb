@@ -15,7 +15,7 @@ module Metasploit
         def check_setup
           res = send_request({ 'uri' => normalize_uri('/enginemanager/login.htm') })
 
-          if res && res.body.include?('Wowza Streaming Engine Manager')
+          if res && res.code == 200 && res.body.include?('Wowza Streaming Engine Manager')
             return false
           end
 
