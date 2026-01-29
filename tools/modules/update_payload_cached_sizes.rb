@@ -25,21 +25,16 @@ require 'rex'
 
 # Initialize the simplified framework instance.
 exceptions = []
-framework = Msf::Simple::Framework.create({'DeferModuleLoads' => true,'DisableDatabase' => true})
-
-# ----------------------------------------
-#   mod_set = framework.modules.module_set('payload')
-#   mod_set.recalculate
-#   mod_inst = mod_set.create(name)
-# ----------------------------------------
+framework = Msf::Simple::Framework.create({'DeferModuleLoads' => true})
 
 framework.payloads.each_module do |name, mod|
   begin
     next if name =~ /generic/
+    next if name =~ /custom/
     mod_inst = framework.payloads.create(name)
     #mod_inst.datastore.merge!(framework.datastore)
     next if mod_inst.is_a?(Msf::Payload::Adapter) || Msf::Util::PayloadCachedSize.is_cached_size_accurate?(mod_inst)
-    $stdout.puts "[*] Updating the CacheSize for #{mod.file_path}..."
+    $stdout.puts "[*] Updating the CacheSize for #{mod.file_path} in #{name}..."
     Msf::Util::PayloadCachedSize.update_module_cached_size(mod_inst)
   rescue => e
     $stderr.puts "[!] Caught Error while updating #{name}:\n#{e}\n#{e.backtrace.map { |line| "\t#{line}" }.join("\n")}"
