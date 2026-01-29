@@ -114,9 +114,8 @@ class PayloadCachedSize
   # @return [Integer]
   def self.is_dynamic?(mod, generation_count=5)
     opts = module_options(mod)
-    sha256 = OpenSSL::Digest.new('SHA256')
     [*(1..generation_count)].map do |x|
-      sha256.digest(mod.generate_simple(opts))
+      mod.generate_simple(opts).size
     end.uniq.length != 1
   end
 
