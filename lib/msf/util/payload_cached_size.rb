@@ -112,10 +112,11 @@ class PayloadCachedSize
   # @param generation_count [Integer] The number of iterations to use to
   #   verify that the size is static.
   # @return [Integer]
-  def self.is_dynamic?(mod, generation_count=5)
-    opts = module_options(mod)
+  def self.is_dynamic?(mod, generation_count=10)
+    sha256 = OpenSSL::Digest.new('SHA256')
     [*(1..generation_count)].map do |x|
-      mod.generate_simple(opts).size
+      opts = module_options(mod)
+      sha256.digest(mod.generate_simple(opts))
     end.uniq.length != 1
   end
 
@@ -124,7 +125,9 @@ class PayloadCachedSize
   # @param mod [Msf::Payload] The class of the payload module to update
   # @return [Boolean]
   def self.is_cached_size_accurate?(mod)
-    return true if mod.dynamic_size? || is_dynamic?(mod)
+    return true if mod.dynamic_size? && is_dynamic?(mod)
+    #return true if mod.dynamic_size?
+    #return true if mod.dynamic_size? || is_dynamic?(mod)
     return false if mod.cached_size.nil?
 
     mod.cached_size == mod.generate_simple(module_options(mod)).size
