@@ -23,7 +23,7 @@ class MetasploitModule < Msf::Auxiliary
           ['READ_FILE', { 'Description' => 'Read an arbitrary file from the target' }],
           ['EXTRACT_SESSION', { 'Description' => 'Create admin JWT sessio key by reading out secrets' }]
         ],
-        'DefaultAction' => 'EXTRACT_ADMIN_SESSION',
+        'DefaultAction' => 'EXTRACT_SESSION',
         'License' => MSF_LICENSE,
         'Notes' => {
           'Stability' => [CRASH_SAFE],
