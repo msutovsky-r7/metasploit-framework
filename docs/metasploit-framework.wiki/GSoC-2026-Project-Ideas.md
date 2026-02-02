@@ -24,12 +24,15 @@ tooling, which interrupts the normal workflow.
 This project would introduce CertificateTrace and KerberosTicketTrace functionality to Metasploit, allowing relevant
 authentication artifacts to be captured and inspected as part of module execution. Similar in concept to the existing
 HttpTrace capability, these traces would focus specifically on certificate and Kerberos-based authentication, decoding
-and presenting useful metadata in a consistent, operator-friendly format. The value of these traces is expected to grow
-alongside continued adoption of Kerberos and certificate-based authentication.
+and presenting useful metadata in a consistent, operator-friendly format. Similar to HttpTrace and HttpTraceHeadersOnly,
+we would expect there to be support for different levels of logging, ex: print only the Certificate Signing Request (CSR).
 
 
-Size: Medium–Large
-Difficulty: 4/5
+Mentors: @jheysel-r7, @zeroSteiner
+Size: 175 hrs
+Difficulty: Medium
+Required Skills: Understanding of how Kerberos and certificate-based authentication work; ability to write and deliver Ruby code.
+Preferred Skills: Experience working with or using Kerberos and/or certificate-based authentication.
 
 ### Automated Vulnerable Environment Provisioning (build_vuln)
 
@@ -49,9 +52,13 @@ where possible (docker-compose files already exist), as well as creating new vul
 popular modules that lack them today.
 
 
-Size: Medium–Large
-Difficulty: 4/5
+Mentors: @jheysel-r7, @h00die
+Size: 360 hrs
+Difficulty: Medium
+Required Skills: Understanding of how containers work in the context of the Open Container Initiative; ability to write and deliver Ruby code.
+Preferred Skills: Experience using containers; understanding of container definitions and best practices.
 
 ## Submit your own
 
-If you want to suggest your own idea, please discuss it with us first on [Slack](https://metasploit.com/slack) in the `#gsoc` channel to make sure it is a reasonable amount of work for a summer and that it fits the goals of the project.
+If you want to suggest your own idea, please discuss it with us first on [Slack](https://metasploit.com/slack) in the
+`#gsoc` channel to make sure it is a reasonable amount of work for a summer and that it fits the goals of the project.
