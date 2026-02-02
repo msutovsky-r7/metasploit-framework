@@ -3,7 +3,7 @@ GSoC Project Ideas in no particular order. When you've picked one, take a look a
 Mentors: [@jheysel-r7](https://github.com/jheysel-r7)
 Co-mentors: [@zeroSteiner](https://github.com/zeroSteiner) [@h00die](https://github.com/h00die)
 
-Slack Contacts: @jheysel-r7, @zeroSteiner and @h00die on [Metasploit Slack](https://metasploit.slack.com/)
+Slack Contacts: @jheysel, @zeroSteiner and @h00die on [Metasploit Slack](https://metasploit.slack.com/)
 
 
 For any questions about these projects reach out on the Metasploit Slack in the `#gsoc` channel or DM one of the mentors
