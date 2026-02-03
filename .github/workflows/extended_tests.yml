@@ -40,7 +40,7 @@ jobs:
             //
             // This script has intentionally been inlined instead of using third-party Github actions for both
             // security and performance reasons.
-            const currentLabelNames = github.event.pull_request.labels.map(label => label.name);
+            const currentLabelNames = context.payload.pull_request.labels.map(label => label.name);
             const newLabelName = "additional-testing-required";
             const comment = `
               Thanks for your pull request! As part of our landing process, we manually verify that all modules work as expected.
