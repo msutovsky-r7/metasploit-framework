@@ -34,6 +34,7 @@ class MetasploitModule < Msf::Auxiliary
           ['URL', 'http://web.archive.org/web/20180107213459/https://github.com/bidord/pykek'],
           ['URL', 'https://www.rapid7.com/blog/post/2014/12/25/12-days-of-haxmas-ms14-068-now-in-metasploit'],
           ['ATT&CK', Mitre::Attack::Technique::T1068_EXPLOITATION_FOR_PRIVILEGE_ESCALATION],
+          ['ATT&CK', Mitre::Attack::Technique::T1212_EXPLOITATION_FOR_CREDENTIAL_ACCESS],
           ['ATT&CK', Mitre::Attack::Technique::T1558_001_GOLDEN_TICKET]
         ],
         'License' => MSF_LICENSE,

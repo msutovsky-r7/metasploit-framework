@@ -29,8 +29,7 @@ class MetasploitModule < Msf::Auxiliary
         'References' => [
           ['URL', 'https://www.slideshare.net/gentilkiwi/abusing-microsoft-kerberos-sorry-you-guys-dont-get-it'],
           ['ATT&CK', Mitre::Attack::Technique::T1558_001_GOLDEN_TICKET],
-          ['ATT&CK', Mitre::Attack::Technique::T1558_002_SILVER_TICKET],
-          ['ATT&CK', Mitre::Attack::Technique::T1134_005_SID_HISTORY_INJECTION]
+          ['ATT&CK', Mitre::Attack::Technique::T1558_002_SILVER_TICKET]
         ],
         'License' => MSF_LICENSE,
         'Notes' => {
