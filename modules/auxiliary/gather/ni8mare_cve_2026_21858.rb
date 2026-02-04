@@ -331,7 +331,7 @@ class MetasploitModule < Msf::Auxiliary
       encryption_key = config_content_json['encryptionKey']
 
       print_good("Extracted encryption key: #{encryption_key}")
-      
+
       encryption_key = (1...encryption_key.length).step(2).map { |i| encryption_key[i] }
       encryption_key = encryption_key.join('')
 
