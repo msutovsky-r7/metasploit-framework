@@ -13,7 +13,7 @@ class MetasploitModule < Msf::Auxiliary
       update_info(
         info,
         'Name' => 'n8n arbitrary file read',
-        'Description' => '#TODO',
+        'Description' => 'This module exploits CVE-2026-21858, a critical unauthenticated remote code execution vulnerability in n8n workflow automation platform versions 1.65.0 through 1.120.x. The vulnerability, dubbed "Ni8mare", is a content-type confusion flaw in webhook request handling that allows attackers to achieve arbitrary file read.',
         'Author' => [
           'dor attias', # research
           'msutovsky-r7' # module
