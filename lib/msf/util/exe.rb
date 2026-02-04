@@ -2,6 +2,11 @@
 
 module Msf::Util::EXE
   include Msf::Util::EXE::Common
+  include Msf::Util::EXE::Windows
+  include Msf::Util::EXE::Linux
+  include Msf::Util::EXE::OSX
+  include Msf::Util::EXE::BSD
+  include Msf::Util::EXE::Solaris
 
   def to_executable_internal(framework, arch, plat, code = '', fmt='', opts = {})
     # This code handles mettle stageless when LinuxMinKernel is 2.4+ because the code will be a elf or macho.
