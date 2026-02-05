@@ -1,19 +1,14 @@
 # -*- coding: binary -*-
-
 module Msf::Util::EXE
   include Msf::Util::EXE::Common
-  include Msf::Util::EXE::Windows
-  include Msf::Util::EXE::Linux
-  include Msf::Util::EXE::OSX
-  include Msf::Util::EXE::BSD
-  include Msf::Util::EXE::Solaris
 
-  def to_executable_internal(framework, arch, plat, code = '', fmt='', opts = {})
+  def self.to_executable_internal(framework, arch, plat, code = '', fmt='', opts = {})
+
     # This code handles mettle stageless when LinuxMinKernel is 2.4+ because the code will be a elf or macho.
-    if elf?(code) || macho?(code)
-      return code
-    end
-
+#    if elf?(code) || macho?(code)
+#      return code
+#    end
+#
     if fmt.empty?
       fmt = 'exe' if plat.index(Msf::Module::Platform::Windows)
       fmt = 'macho' if plat.index(Msf::Module::Platform::OSX)
@@ -21,29 +16,14 @@ module Msf::Util::EXE
     end
 
     self.extend(Msf::Util::EXE::Linux) if plat.index(Msf::Module::Platform::Linux)
-    self.extend(Msf::Util::EXE::OSX)   if plat.index(Msf::Module::Platform::OSX)
-    self.extend(Msf::Util::EXE::BSD)   if plat.index(Msf::Module::Platform::BSD)
+    self.extend(Msf::Util::EXE::OSX) if plat.index(Msf::Module::Platform::OSX)
+    self.extend(Msf::Util::EXE::BSD) if plat.index(Msf::Module::Platform::BSD)
     self.extend(Msf::Util::EXE::Solaris) if plat.index(Msf::Module::Platform::Solaris)
     self.extend(Msf::Util::EXE::Windows) if plat.index(Msf::Module::Platform::Windows)
-    return to_executable(framework, arch, plat, code, fmt, opts) if respond_to?(:to_executable)
+    return self.to_executable(framework, arch, code, fmt, opts) if respond_to?(:to_executable)
     nil
   end
   
-  # Executable generators
-  #
-  # @param arch       [Array<String>] The architecture of the system (i.e :x86, :x64)
-  # @param plat       [String] The platform (i.e Linux, Windows, OSX)
-  # @param code       [String]
-  # @param opts       [Hash]   The options hash
-  # @param framework  [Msf::Framework]  The framework of you want to use
-  # @return           [String]
-  # @return           [NilClass]
-  def self.to_executable(framework, arch, plat, code = '', fmt='', opts = {})
-    utils_exe = Object.new.extend(Msf::Util::EXE)
-    utils_exe.to_executable_internal(framework, arch, plat, code, fmt, opts)
-  end
-
-
   #
   # Generate an executable of a given format suitable for running on the
   # architecture/platform pair.
@@ -75,201 +55,8 @@ module Msf::Util::EXE
       end
       return output
     end
-
-    # otherwise the result of this huge case statement is returned
-    case fmt
-    when 'asp'
-      exe = to_executable_fmt(framework, arch, plat, code, 'exe-small', exeopts)
-      Msf::Util::EXE.to_exe_asp(exe, exeopts)
-    when 'aspx'
-      Msf::Util::EXE.to_mem_aspx(framework, code, exeopts)
-    when 'aspx-exe'
-      exe = to_executable_fmt(framework, arch, plat, code, 'exe-small', exeopts)
-      Msf::Util::EXE.to_exe_aspx(exe, exeopts)
-    when 'dll'
-      case arch
-      when ARCH_X86, nil
-        to_win32pe_dll(framework, code, exeopts)
-      when ARCH_X64
-        to_win64pe_dll(framework, code, exeopts)
-      end
-    when 'exe'
-      case arch
-      when ARCH_X86, nil
-        to_win32pe(framework, code, exeopts)
-      when ARCH_X64
-        to_win64pe(framework, code, exeopts)
-      end
-    when 'exe-service'
-      case arch
-      when ARCH_X86, nil
-        to_win32pe_service(framework, code, exeopts)
-      when ARCH_X64
-        to_win64pe_service(framework, code, exeopts)
-      end
-    when 'exe-small'
-      case arch
-      when ARCH_X86, nil
-        to_win32pe_old(framework, code, exeopts)
-      when ARCH_X64
-        to_win64pe(framework, code, exeopts)
-      end
-    when 'exe-only'
-      case arch
-      when ARCH_X86, nil
-        to_winpe_only(framework, code, exeopts)
-      when ARCH_X64
-        to_winpe_only(framework, code, exeopts, arch)
-      end
-    when 'msi'
-      case arch
-      when ARCH_X86, nil
-        exe = to_win32pe(framework, code, exeopts)
-      when ARCH_X64
-        exe = to_win64pe(framework, code, exeopts)
-      end
-      exeopts[:uac] = true
-      Msf::Util::EXE.to_exe_msi(framework, exe, exeopts)
-    when 'msi-nouac'
-      case arch
-      when ARCH_X86, nil
-        exe = to_win32pe(framework, code, exeopts)
-      when ARCH_X64
-        exe = to_win64pe(framework, code, exeopts)
-      end
-      Msf::Util::EXE.to_exe_msi(framework, exe, exeopts)
-    when 'elf'
-      if elf? code
-        return code
-      end
-
-      if !plat || plat.index(Msf::Module::Platform::Linux)
-        case arch
-        when ARCH_X86, nil
-          to_linux_x86_elf(framework, code, exeopts)
-        when ARCH_X64
-          to_linux_x64_elf(framework, code, exeopts)
-        when ARCH_AARCH64
-          to_linux_aarch64_elf(framework, code, exeopts)
-        when ARCH_ARMLE
-          to_linux_armle_elf(framework, code, exeopts)
-        when ARCH_ARMBE
-          to_linux_armbe_elf(framework, code, exeopts)
-        when ARCH_MIPSBE
-          to_linux_mipsbe_elf(framework, code, exeopts)
-        when ARCH_MIPSLE
-          to_linux_mipsle_elf(framework, code, exeopts)
-        when ARCH_MIPS64
-          to_linux_mips64_elf(framework, code, exeopts)
-        when ARCH_RISCV32LE
-          to_linux_riscv32le_elf(framework, code, exeopts)
-        when ARCH_RISCV64LE
-          to_linux_riscv64le_elf(framework, code, exeopts)
-        when ARCH_PPC64LE
-          to_linux_ppc64le_elf(framework, code, exeopts)
-        when ARCH_PPC
-          to_linux_ppc_elf(framework, code, exeopts)
-        when ARCH_PPCE500V2
-          to_linux_ppce500v2_elf(framework, code, exeopts)
-        when ARCH_ZARCH
-          to_linux_zarch_elf(framework, code, exeopts)
-        when ARCH_LOONGARCH64
-          to_linux_loongarch64_elf(framework, code, exeopts)
-        end
-      elsif plat && plat.index(Msf::Module::Platform::BSD)
-        case arch
-        when ARCH_X86, nil
-          Msf::Util::EXE.to_bsd_x86_elf(framework, code, exeopts)
-        when ARCH_X64
-          Msf::Util::EXE.to_bsd_x64_elf(framework, code, exeopts)
-        end
-      elsif plat && plat.index(Msf::Module::Platform::Solaris)
-        case arch
-        when ARCH_X86, nil
-          to_solaris_x86_elf(framework, code, exeopts)
-        end
-      end
-    when 'elf-so'
-      if elf? code
-        return code
-      end
-
-      if !plat || plat.index(Msf::Module::Platform::Linux)
-        case arch
-        when ARCH_X86
-          to_linux_x86_elf_dll(framework, code, exeopts)
-        when ARCH_X64
-          to_linux_x64_elf_dll(framework, code, exeopts)
-        when ARCH_ARMLE
-          to_linux_armle_elf_dll(framework, code, exeopts)
-        when ARCH_AARCH64
-          to_linux_aarch64_elf_dll(framework, code, exeopts)
-        when ARCH_RISCV32LE
-          to_linux_riscv32le_elf_dll(framework, code, exeopts)
-        when ARCH_RISCV64LE
-          to_linux_riscv64le_elf_dll(framework, code, exeopts)
-        when ARCH_LOONGARCH64
-          to_linux_loongarch64_elf_dll(framework, code, exeopts)
-        end
-      end
-    when 'macho', 'osx-app'
-      if macho? code
-        macho = code
-      else
-        macho = case arch
-                when ARCH_X86, nil
-                  to_osx_x86_macho(framework, code, exeopts)
-                when ARCH_X64
-                  to_osx_x64_macho(framework, code, exeopts)
-                when ARCH_ARMLE
-                  to_osx_arm_macho(framework, code, exeopts)
-                when ARCH_PPC
-                  to_osx_ppc_macho(framework, code, exeopts)
-                when ARCH_AARCH64
-                  to_osx_aarch64_macho(framework, code, exeopts)
-                end
-      end
-      fmt == 'osx-app' ? Msf::Util::EXE.to_osx_app(macho) : macho
-    when 'vba'
-      Msf::Util::EXE.to_vba(framework, code, exeopts)
-    when 'vba-exe'
-      exe = to_executable_fmt(framework, arch, plat, code, 'exe-small', exeopts)
-      Msf::Util::EXE.to_exe_vba(exe)
-    when 'vba-psh'
-      Msf::Util::EXE.to_powershell_vba(framework, arch, code)
-    when 'vbs'
-      exe = to_executable_fmt(framework, arch, plat, code, 'exe-small', exeopts)
-      Msf::Util::EXE.to_exe_vbs(exe, exeopts.merge({ persist: false }))
-    when 'loop-vbs'
-      exe = to_executable_fmt(framework, arch, plat, code, 'exe-small', exeopts)
-      Msf::Util::EXE.to_exe_vbs(exe, exeopts.merge({ persist: true }))
-    when 'jsp'
-      arch ||= [ ARCH_X86 ]
-      tmp_plat = plat.platforms if plat
-      tmp_plat ||= Msf::Module::PlatformList.transform('win')
-      exe = Msf::Util::EXE.to_executable(framework, arch, tmp_plat, code, exeopts)
-      Msf::Util::EXE.to_jsp(exe)
-    when 'war'
-      arch ||= [ ARCH_X86 ]
-      tmp_plat = plat.platforms if plat
-      tmp_plat ||= Msf::Module::PlatformList.transform('win')
-      exe = Msf::Util::EXE.to_executable(framework, arch, tmp_plat, code, exeopts)
-      Msf::Util::EXE.to_jsp_war(exe)
-    when 'psh'
-      Msf::Util::EXE.to_win32pe_psh(framework, code, exeopts)
-    when 'psh-net'
-      Msf::Util::EXE.to_win32pe_psh_net(framework, code, exeopts)
-    when 'psh-reflection'
-      Msf::Util::EXE.to_win32pe_psh_reflection(framework, code, exeopts)
-    when 'psh-cmd'
-      Msf::Util::EXE.to_powershell_command(framework, arch, code)
-    when 'hta-psh'
-      Msf::Util::EXE.to_powershell_hta(framework, arch, code)
-    when 'python-reflection'
-      Msf::Util::EXE.to_python_reflection(framework, arch, code, exeopts)
-    when 'ducky-script-psh'
-      Msf::Util::EXE.to_powershell_ducky_script(framework, arch, code)
-    end
+    
+    return to_executable_internal(framework, arch, plat, code, fmt, exeopts)
   end
 
   # self.encode_stub

