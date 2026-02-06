@@ -22,7 +22,7 @@ module Msf::Util::EXE::Windows::Aarch64
       pe = File.read(opts[:template], mode: 'rb')
 
       # Find the tag and inject the payload
-      bo = Msf::Util::EXE::Windows::Common.find_payload_tag(pe, 'Invalid Windows AArch64 template: missing "PAYLOAD:" tag')
+      bo = Msf::Util::EXE::Common.find_payload_tag(pe, 'Invalid Windows AArch64 template: missing "PAYLOAD:" tag')
       pe[bo, code.length] = code.dup
       pe
     end

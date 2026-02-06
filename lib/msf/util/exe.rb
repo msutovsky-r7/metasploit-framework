@@ -4,11 +4,22 @@ module Msf::Util::EXE
 
   def self.to_executable_internal(framework, arch, plat, code = '', fmt='', opts = {})
 
-    # This code handles mettle stageless when LinuxMinKernel is 2.4+ because the code will be a elf or macho.
-#    if elf?(code) || macho?(code)
-#      return code
-#    end
-#
+    
+    # let generate_simple handle raw payloads
+    # hopefully, this won't break anything
+    return code if fmt == 'raw'
+    
+    # some payloads need to be only wrapped
+    return Msf::Util::EXE::Common.to_vba(code, opts) if fmt == 'vba'
+    return Msf::Util::EXE::Common.to_win32pe_psh( code, opts) if fmt == 'psh'
+    return Msf::Util::EXE::Common.to_win32pe_psh_net( code, opts) if fmt == 'psh-net'
+    return Msf::Util::EXE::Common.to_win32pe_psh_reflection( code, opts) if fmt == 'psh-reflection'
+    return Msf::Util::EXE::Common.to_powershell_command( arch, code) if fmt == 'psh-cmd'
+    return Msf::Util::EXE::Common.to_powershell_hta( arch, code) if fmt == 'hta-psh'
+    return Msf::Util::EXE::Common.to_python_reflection( arch, code, opts) if fmt == 'python-reflection'
+    return Msf::Util::EXE::Common.to_powershell_ducky_script( arch, code) if fmt == 'ducky-script-psh'
+    return Msf::Util::EXE::Common.to_powershell_vba(code, opts) if fmt == 'vba-psh'
+
     if fmt.empty?
       fmt = 'exe' if plat.index(Msf::Module::Platform::Windows)
       fmt = 'macho' if plat.index(Msf::Module::Platform::OSX)
@@ -20,8 +31,8 @@ module Msf::Util::EXE
     self.extend(Msf::Util::EXE::BSD) if plat.index(Msf::Module::Platform::BSD)
     self.extend(Msf::Util::EXE::Solaris) if plat.index(Msf::Module::Platform::Solaris)
     self.extend(Msf::Util::EXE::Windows) if plat.index(Msf::Module::Platform::Windows)
-    return self.to_executable(framework, arch, code, fmt, opts) if respond_to?(:to_executable)
-    nil
+    
+    self.to_executable(framework, arch, code, fmt, opts) if respond_to?(:to_executable)
   end
   
   #
@@ -47,6 +58,7 @@ module Msf::Util::EXE
   def self.to_executable_fmt(framework, arch, plat, code, fmt, exeopts)
     # For backwards compatibility with the way this gets called when
     # generating from Msf::Simple::Payload.generate_simple
+    
     if arch.is_a? Array
       output = nil
       arch.each do |a|
@@ -57,41 +69,6 @@ module Msf::Util::EXE
     end
     
     return to_executable_internal(framework, arch, plat, code, fmt, exeopts)
-  end
-
-  # self.encode_stub
-  #
-  # @param framework [Msf::Framework]
-  # @param arch     [String]
-  # @param code     [String]
-  # @param platform [String]
-  # @param badchars [String]
-  def self.encode_stub(framework, arch, code, platform = nil, badchars = '')
-    return code unless framework.encoders
-
-    framework.encoders.each_module_ranked('Arch' => arch) do |name, _mod|
-      enc = framework.encoders.create(name)
-      raw = enc.encode(code, badchars, nil, platform)
-      return raw if raw
-    rescue StandardError
-    end
-    nil
-  end
-
-  def self.generate_nops(framework, arch, len, opts = {})
-    opts['BadChars'] ||= ''
-    opts['SaveRegisters'] ||= [ 'esp', 'ebp', 'esi', 'edi' ]
-
-    return nil unless framework.nops
-
-    framework.nops.each_module_ranked('Arch' => arch) do |name, _mod|
-      nop = framework.nops.create(name)
-      raw = nop.generate_sled(len, opts)
-      return raw if raw
-    rescue StandardError
-      # @TODO: stop rescuing everying on each of these, be selective
-    end
-    nil
   end
 
   

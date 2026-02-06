@@ -1,13 +1,117 @@
 module Msf::Util::EXE::Linux
+  
+  include Msf::Util::EXE::Linux::Common
+  include Msf::Util::EXE::Linux::Aarch64
+  include Msf::Util::EXE::Linux::Armle
+  include Msf::Util::EXE::Linux::Armbe
+  include Msf::Util::EXE::Linux::Loongarch64
+  include Msf::Util::EXE::Linux::Mips64
+  include Msf::Util::EXE::Linux::Mipsbe
+  include Msf::Util::EXE::Linux::Mipsle
+  include Msf::Util::EXE::Linux::Ppc
+  include Msf::Util::EXE::Linux::Ppc64
+  include Msf::Util::EXE::Linux::Ppce500v2 
+  include Msf::Util::EXE::Linux::Riscv32le
+  include Msf::Util::EXE::Linux::Riscv32le
+  include Msf::Util::EXE::Linux::X64
+  include Msf::Util::EXE::Linux::X86
+  include Msf::Util::EXE::Linux::Zarch
+
   def to_executable(framework, arch, code, fmt = 'elf', opts = {})
-    linux = Object.new.extend(Msf::Util::EXE::Common)
-    linux.extend(Msf::Util::EXE::Linux::Common)
-    linux.extend(Msf::Util::EXE::Linux::Common)
-    linux.extend(Msf::Util::EXE::Linux::X86) if arch =~ /x86|i386/i
-    linux.extend(Msf::Util::EXE::Linux::X64) if arch =~ /x64|x86_64|amd64/i
-    linux.extend(Msf::Util::EXE::Linux::Aarch64) if arch =~ /aarch64|arm64/i
-    linux.extend(Msf::Util::EXE::Linux::Armle) if arch =~ /armle|armv7l/i
-    return linux.to_executable(framework, code, opts, fmt) if linux.respond_to?(:to_executable)
-    nil
+    
+    elf_formats = ['elf','elf-so']
+    elf_fmt = 'elf'
+    elf_fmt = fmt if elf_formats.include?(fmt)
+
+    elf = to_executable_linux_x86(framework, code, elf_fmt, opts) if arch == ARCH_X86
+    elf = to_executable_linux_x64(framework, code, elf_fmt,opts) if arch == ARCH_X64
+    elf = to_executable_linux_armle(framework, code, elf_fmt,opts) if arch == ARCH_ARMLE
+    elf = to_executable_linux_armbe(framework, code, elf_fmt,opts) if arch == ARCH_ARMBE
+    elf = to_executable_linux_aarch64(framework, code, elf_fmt,opts) if arch == ARCH_AARCH64
+    elf = to_executable_linux_mipsbe(framework, code, elf_fmt,opts) if arch == ARCH_MIPSBE
+    elf = to_executable_linux_mipsle(framework, code, elf_fmt,opts) if arch == ARCH_MIPSLE
+    elf = to_executable_linux_mips64(framework, code, elf_fmt,opts) if arch == ARCH_MIPS64
+    elf = to_executable_linux_ppc(framework, code, elf_fmt,opts) if arch == ARCH_PPC
+    elf = to_executable_linux_ppc64(framework, code, elf_fmt,opts) if arch == ARCH_PPC64LE
+    elf = to_executable_linux_ppce500v2(framework, code, elf_fmt,opts) if arch == ARCH_PPCE500V2
+    elf = to_executable_linux_riscv32le(framework, code,elf_fmt, opts) if arch == ARCH_RISCV32LE
+    elf = to_executable_linux_riscv64le(framework, code, elf_fmt,opts) if arch == ARCH_RISCV64LE
+    elf = to_executable_linux_zarch(framework, code, elf_fmt,opts) if arch == ARCH_ZARCH
+    elf = to_executable_linux_loongarch64(framework, code, elf_fmt,opts) if arch == ARCH_LOONGARCH64
+
+    return elf if elf_formats.include?(fmt) # Returning only the elf
+    
+    wrapped = nil
+    wrapped = Msf::Util::EXE::Windows::Common.to_jsp(exe) if fmt == 'jsp'
+    wrapped = Msf::Util::EXE::Windows::Common.to_jsp_war(exe) if fmt == 'war'
+
+    wrapped # Returning the wrapped exe on the desired format
+  end
+  
+  def to_executable_linux_x64(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::X64.to_linux_x64_elf(framework, code, opts) if fmt == 'elf'
+    return Msf::Util::EXE::Linux::X64.to_linux_x64_elf_dll(framework, code, opts) if fmt == 'elf-so'
+  end
+  
+  def to_executable_linux_x86(framework, code, fmt = 'exe', opts = {})
+    return Msf::Util::EXE::Linux::X86.to_linux_x86_elf(framework, code, opts) if fmt == 'elf'
+    return Msf::Util::EXE::Linux::X86.to_linux_x86_elf_dll(framework, code, opts) if fmt == 'elf-so'
+  end
+
+  def to_executable_linux_armle(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Armle.to_linux_armle_elf(framework, code, opts) if fmt == 'elf'
+    return Msf::Util::EXE::Linux::Armle.to_linux_armle_elf_dll(framework, code, opts) if fmt == 'elf-so'
+  end
+
+  def to_executable_linux_armbe(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Armbe.to_linux_armbe_elf(framework, code, opts) if fmt == 'elf'
+  end
+
+  def to_executable_linux_aarch64(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Aarch64.to_linux_aarch64_elf(framework, code, opts) if fmt == 'elf'
+    return Msf::Util::EXE::Linux::Aarch64.to_linux_aarch64_elf_dll(framework, code, opts) if fmt == 'elf-so'
+  end
+
+  def to_executable_linux_mipsbe(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Mipsbe.to_linux_mipsbe_elf(framework, code, opts) if fmt == 'elf'
+  end
+
+  def to_executable_linux_mipsle(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Mipsle.to_linux_mipsle_elf(framework, code, opts) if fmt == 'elf'
+  end
+
+  def to_executable_linux_mips64(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Mips64.to_linux_mips64_elf(framework, code, opts) if fmt == 'elf'
+  end
+
+  def to_executable_linux_ppc(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::PPC.to_linux_ppc_elf(framework, code, opts) if fmt == 'elf'
+  end
+  
+  def to_executable_linux_ppc64(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Ppc64.to_linux_ppc64_elf(framework, code, opts) if fmt == 'elf'
+  end
+
+  def to_executable_linux_ppce500v2(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Ppce500v2.to_linux_ppce500v2_elf(framework, code, opts) if fmt == 'elf'
+  end
+
+  def to_executable_linux_riscv32le(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Riscv32le.to_linux_riscv32le_elf(framework, code, opts) if fmt == 'elf'
+    return Msf::Util::EXE::Linux::Riscv32le.to_linux_riscv32le_elf_dll(framework, code, opts) if fmt == 'elf-so'
+  end
+
+  def to_executable_linux_riscv64le(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Riscv64le.to_linux_riscv64le_elf(framework, code, opts) if fmt == 'elf'
+    return Msf::Util::EXE::Linux::Riscv64le.to_linux_riscv64le_elf_dll(framework, code, opts) if fmt == 'elf-so'
+  end
+
+  def to_executable_linux_zarch(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Zarch.to_linux_zarch_elf(framework, code, opts) if fmt == 'elf'
+  end
+
+  def to_executable_linux_loongarch64(framework, code, fmt = 'elf', opts = {})
+    return Msf::Util::EXE::Linux::Loongarch64.to_linux_loongarch64_elf(framework, code, opts) if fmt == 'elf'
+    return Msf::Util::EXE::Linux::Loongarch64.to_linux_loongarch64_elf_dll(framework, code, opts) if fmt == 'elf-so'
   end
 end

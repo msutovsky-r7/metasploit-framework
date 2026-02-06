@@ -1,10 +1,9 @@
 module Msf::Util::EXE::Linux::Ppc
-  include Msf::Util::EXE::Linux::Common
-
-  def to_executable(framework, code, fmt='elf', opts = {})
-    return to_linux_ppc_elf(framework, code, opts) if fmt == 'elf'
-    # return to_linux_ppc_elf_dll(framework, code, opts) if fmt == 'elf-so' Not implemented yet
+  def self.included(base)
+    base.extend(ClassMethods)
   end
+  
+  module ClassMethods
 
   # Create a PPC 32-bit BE Linux ELF containing the payload provided in +code+
   # to_linux_ppc_elf
@@ -15,6 +14,13 @@ module Msf::Util::EXE::Linux::Ppc
   # @option           [String] :template
   # @return           [String] Returns an elf
   def to_linux_ppc_elf(framework, code, opts = {})
-    to_exe_elf(framework, opts, "template_ppc_linux.bin", code)
+    Msf::Util::EXE::Common.to_exe_elf(framework, opts, "template_ppc_linux.bin", code)
   end
+  end
+
+  class << self
+    include ClassMethods
+  end
+
+
 end

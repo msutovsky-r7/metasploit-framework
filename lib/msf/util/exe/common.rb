@@ -26,8 +26,8 @@ module Msf::Util::EXE::Common
       zip = Rex::Zip::Archive.new
 
       files.each do |f|
-        data    = f[:data]
-        fname   = f[:fname]
+        data = f[:data]
+        fname = f[:fname]
         comment = f[:comment] || ''
         zip.add_file(fname, data, comment)
       end
@@ -45,12 +45,12 @@ module Msf::Util::EXE::Common
     # @param  path [String] Where you would like the template to be saved.
     def set_template_default(opts, exe = nil, path = nil)
       # If no path specified, use the default one
-      path ||= File.join(Msf::Config.data_directory, "templates")
+      path ||= File.join(Msf::Config.data_directory, 'templates')
 
       # If there's no default name, we must blow it up.
       unless exe
-        raise RuntimeError, 'Ack! Msf::Util::EXE.set_template_default called ' +
-        'without default exe name!'
+        raise 'Ack! Msf::Util::EXE.set_template_default called ' +
+              'without default exe name!'.to_s
       end
 
       # Use defaults only if nothing is specified
@@ -64,12 +64,13 @@ module Msf::Util::EXE::Common
 
       # Check if it exists now
       return if File.file?(opts[:template])
+
       # If it failed, try the default...
       if opts[:fallback]
         default_template = File.join(path, exe)
         if File.file?(default_template)
           # Perhaps we should warn about falling back to the default?
-          opts.merge!({ :fellback => default_template })
+          opts.merge!({ fellback: default_template })
           opts[:template] = default_template
         end
       end
@@ -80,21 +81,21 @@ module Msf::Util::EXE::Common
     # @param filename [String] Name of the file
     # @param hash_sub [Hash]
     def read_replace_script_template(filename, hash_sub)
-      template_pathname = File.join(Msf::Config.data_directory, "templates",
-                                    "scripts", filename)
+      template_pathname = File.join(Msf::Config.data_directory, 'templates',
+                                    'scripts', filename)
       template = ''
-      File.open(template_pathname, "rb") {|f| template = f.read}
+      File.open(template_pathname, 'rb') { |f| template = f.read }
       template % hash_sub
     end
 
-      # get_file_contents
+    # get_file_contents
     #
     # @param perms  [String]
     # @param file   [String]
     # @return       [String]
-    def get_file_contents(file, perms = "rb")
+    def get_file_contents(file, perms = 'rb')
       contents = ''
-      File.open(file, perms) {|fd| contents = fd.read(fd.stat.size)}
+      File.open(file, perms) { |fd| contents = fd.read(fd.stat.size) }
       contents
     end
 
@@ -107,13 +108,10 @@ module Msf::Util::EXE::Common
     def find_payload_tag(mo, err_msg)
       bo = mo.index('PAYLOAD:')
       unless bo
-        raise RuntimeError, err_msg
+        raise err_msg.to_s
       end
-      bo
-    end
 
-    def elf?(code)
-      code[0..3] == "\x7FELF"
+      bo
     end
 
     def macho?(code)
@@ -134,53 +132,53 @@ module Msf::Util::EXE::Common
     # @param code       [String]
     # @param big_endian [Boolean]  Set to "false" by default
     # @return           [String]
-    def to_exe_elf(framework, opts, template, code, big_endian=false)
-      if elf? code
+    def to_exe_elf(framework, opts, template, code, big_endian = false)
+      if Msf::Util::EXE::Linux::Common.elf? code
         return code
       end
 
       # Allow the user to specify their own template
-      set_template_default(opts, template)
+      Msf::Util::EXE::Common.set_template_default(opts, template)
 
       # The old way to do it is like other formats, just overwrite a big
       # block of rwx mem with our shellcode.
-      #bo = elf.index( "\x90\x90\x90\x90" * 1024 )
-      #co = elf.index( " " * 512 )
-      #elf[bo, 2048] = [code].pack('a2048') if bo
+      # bo = elf.index( "\x90\x90\x90\x90" * 1024 )
+      # co = elf.index( " " * 512 )
+      # elf[bo, 2048] = [code].pack('a2048') if bo
 
       # The new template is just an ELF header with its entry point set to
       # the end of the file, so just append shellcode to it and fixup
       # p_filesz and p_memsz in the header for a working ELF executable.
-      elf = get_file_contents(opts[:template])
+      elf = Msf::Util::EXE::Common.get_file_contents(opts[:template])
       elf << code
 
       # Check EI_CLASS to determine if the header is 32 or 64 bit
       # Use the proper offsets and pack size
-      case elf[4,1].unpack("C").first
+      case elf[4, 1].unpack('C').first
       when 1 # ELFCLASS32 - 32 bit (ruby 1.9+)
         if big_endian
-          elf[0x44,4] = [elf.length].pack('N') #p_filesz
-          elf[0x48,4] = [elf.length + code.length].pack('N') #p_memsz
+          elf[0x44, 4] = [elf.length].pack('N') # p_filesz
+          elf[0x48, 4] = [elf.length + code.length].pack('N') # p_memsz
         else # little endian
-          elf[0x44,4] = [elf.length].pack('V') #p_filesz
-          elf[0x48,4] = [elf.length + code.length].pack('V') #p_memsz
+          elf[0x44, 4] = [elf.length].pack('V') # p_filesz
+          elf[0x48, 4] = [elf.length + code.length].pack('V') # p_memsz
         end
       when 2 # ELFCLASS64 - 64 bit (ruby 1.9+)
         if big_endian
-          elf[0x60,8] = [elf.length].pack('Q>') #p_filesz
-          elf[0x68,8] = [elf.length + code.length].pack('Q>') #p_memsz
+          elf[0x60, 8] = [elf.length].pack('Q>') # p_filesz
+          elf[0x68, 8] = [elf.length + code.length].pack('Q>') # p_memsz
         else # little endian
-          elf[0x60,8] = [elf.length].pack('Q<') #p_filesz
-          elf[0x68,8] = [elf.length + code.length].pack('Q<') #p_memsz
+          elf[0x60, 8] = [elf.length].pack('Q<') # p_filesz
+          elf[0x68, 8] = [elf.length + code.length].pack('Q<') # p_memsz
         end
       else
-        raise RuntimeError, "Invalid ELF template: EI_CLASS value not supported"
+        raise 'Invalid ELF template: EI_CLASS value not supported'
       end
 
       elf
     end
 
-    def to_python_reflection(framework, arch, code, exeopts)
+    def to_python_reflection(arch, code, exeopts)
       unless [ ARCH_X86, ARCH_X64, ARCH_AARCH64, ARCH_ARMLE, ARCH_MIPSBE, ARCH_MIPSLE, ARCH_PPC ].include? arch
         raise "Msf::Util::EXE.to_python_reflection is not compatible with #{arch}"
       end
@@ -280,6 +278,117 @@ module Msf::Util::EXE::Common
       end
 
       zip.pack
+    end
+
+    def to_vba(code = '', opts = {})
+      hash_sub = {}
+      hash_sub[:var_myByte] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_myArray] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_rwxpage] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_res] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_offset] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_lpThreadAttributes] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_dwStackSize] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_lpStartAddress] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_lpParameter] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_dwCreationFlags] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_lpThreadID] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_lpAddr] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_lSize] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_flAllocationType] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_flProtect] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_lDest] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_Source] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+      hash_sub[:var_Length] = Rex::Text.rand_text_alpha(rand(3..9)).capitalize
+
+      # put the shellcode bytes into an array
+      hash_sub[:bytes] = Rex::Text.to_vbapplication(code, hash_sub[:var_myArray])
+
+      Msf::Util::EXE::Common.read_replace_script_template('to_mem.vba.template', hash_sub)
+    end
+
+    def to_powershell_vba(arch, code)
+      template_path = Rex::Powershell::Templates::TEMPLATE_DIR
+
+      powershell = Rex::Powershell::Command.cmd_psh_payload(code,
+                                                            arch,
+                                                            template_path,
+                                                            encode_final_payload: true,
+                                                            remove_comspec: true,
+                                                            method: 'reflection')
+
+      # Initialize rig and value names
+      rig = Rex::RandomIdentifier::Generator.new
+      rig.init_var(:sub_auto_open)
+      rig.init_var(:var_powershell)
+
+      hash_sub = rig.to_h
+      # VBA has a maximum of 24 line continuations
+      line_length = powershell.length / 24
+      vba_psh = '"' << powershell.scan(/.{1,#{line_length}}/).join("\" _\r\n& \"") << '"'
+
+      hash_sub[:powershell] = vba_psh
+
+      Msf::Util::EXE::Common.read_replace_script_template('to_powershell.vba.template', hash_sub)
+    end
+
+    def to_win32pe_psh_net(code, opts = {})
+      Rex::Powershell::Payload.to_win32pe_psh_net(Rex::Powershell::Templates::TEMPLATE_DIR, code)
+    end
+
+    def to_win32pe_psh(code, opts = {})
+      Rex::Powershell::Payload.to_win32pe_psh(Rex::Powershell::Templates::TEMPLATE_DIR, code)
+    end
+
+    #
+    # Reflection technique prevents the temporary .cs file being created for the .NET compiler
+    # Tweaked by shellster
+    # Originally from PowerSploit
+    #
+    def to_win32pe_psh_reflection(code, opts = {})
+      Rex::Powershell::Payload.to_win32pe_psh_reflection(Rex::Powershell::Templates::TEMPLATE_DIR, code)
+    end
+
+    def to_powershell_command(arch, code)
+      template_path = Rex::Powershell::Templates::TEMPLATE_DIR
+      Rex::Powershell::Command.cmd_psh_payload(code,
+                                               arch,
+                                               template_path,
+                                               encode_final_payload: true,
+                                               method: 'reflection')
+    end
+
+    def to_powershell_ducky_script(arch, code)
+      template_path = Rex::Powershell::Templates::TEMPLATE_DIR
+      powershell = Rex::Powershell::Command.cmd_psh_payload(code,
+                                                            arch,
+                                                            template_path,
+                                                            encode_final_payload: true,
+                                                            method: 'reflection')
+      replacers = {}
+      replacers[:var_payload] = powershell
+      Msf::Util::EXE::Common.read_replace_script_template('to_powershell.ducky_script.template', replacers)
+    end
+
+    def to_powershell_hta(arch, code)
+      template_path = Rex::Powershell::Templates::TEMPLATE_DIR
+
+      powershell = Rex::Powershell::Command.cmd_psh_payload(code,
+                                                            arch,
+                                                            template_path,
+                                                            encode_final_payload: true,
+                                                            remove_comspec: true,
+                                                            method: 'reflection')
+
+      # Initialize rig and value names
+      rig = Rex::RandomIdentifier::Generator.new
+      rig.init_var(:var_shell)
+      rig.init_var(:var_fso)
+
+      hash_sub = rig.to_h
+      hash_sub[:powershell] = powershell
+
+      Msf::Util::EXE::Common.read_replace_script_template('to_powershell.hta.template', hash_sub)
     end
   end
 
