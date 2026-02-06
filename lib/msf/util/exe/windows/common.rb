@@ -1,4 +1,4 @@
-class Msf::Util::EXE::Windows::Common
+module Msf::Util::EXE::Windows::Common
 
   # exe_sub_method
   #
