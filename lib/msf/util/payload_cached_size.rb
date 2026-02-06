@@ -125,8 +125,8 @@ class PayloadCachedSize
   # @param mod [Msf::Payload] The class of the payload module to update
   # @return [Boolean]
   def self.is_cached_size_accurate?(mod)
-    return true if mod.dynamic_size? && is_dynamic?(mod)
-    #return true if mod.dynamic_size?
+    #return true if mod.dynamic_size? && is_dynamic?(mod)
+    return true if mod.dynamic_size?
     #return true if mod.dynamic_size? || is_dynamic?(mod)
     return false if mod.cached_size.nil?
 
