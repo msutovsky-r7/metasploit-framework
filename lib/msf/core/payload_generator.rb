@@ -335,7 +335,7 @@ module Msf
       encryption_opts[:iv] = encryption_iv if encryption_iv
       encryption_opts[:key] = encryption_key if encryption_key
 
-      if  Msf::Util::EXE.elf?(shellcode) && format.downcase != 'elf'
+      if Msf::Util::EXE.elf?(shellcode) && format.downcase != 'elf'
         # TODO: force generation from stager/stage if available
         raise InvalidFormat, 'selected payload can only generate ELF files'
       end
