@@ -8,6 +8,40 @@ module Msf::Util::EXE
   include Msf::Util::EXE::Solaris
   include Msf::Util::EXE::Bsd
 
+  include Msf::Util::EXE::Windows::Common
+  include Msf::Util::EXE::Linux::Common
+  include Msf::Util::EXE::OSX::Common
+
+  include Msf::Util::EXE::Windows::X86
+  include Msf::Util::EXE::Windows::X64
+  include Msf::Util::EXE::Windows::Aarch64
+
+  include Msf::Util::EXE::Linux::X86
+  include Msf::Util::EXE::Linux::X64
+  include Msf::Util::EXE::Linux::Armle
+  include Msf::Util::EXE::Linux::Aarch64
+  include Msf::Util::EXE::Linux::Mipsle
+  include Msf::Util::EXE::Linux::Mipsbe
+  include Msf::Util::EXE::Linux::Mips64
+  include Msf::Util::EXE::Linux::Riscv32le
+  include Msf::Util::EXE::Linux::Riscv64le
+  include Msf::Util::EXE::Linux::Ppc
+  include Msf::Util::EXE::Linux::Ppc64
+  include Msf::Util::EXE::Linux::Ppce500v2
+  include Msf::Util::EXE::Linux::Zarch
+  include Msf::Util::EXE::Linux::Loongarch64
+
+  include Msf::Util::EXE::OSX::X86
+  include Msf::Util::EXE::OSX::X64
+  include Msf::Util::EXE::OSX::Armle
+  include Msf::Util::EXE::OSX::Aarch64
+  include Msf::Util::EXE::OSX::Ppc
+
+  include Msf::Util::EXE::Solaris::X86
+
+  include Msf::Util::EXE::Bsd::X86
+  include Msf::Util::EXE::Bsd::X64
+
   def self.included(base)
     base.extend(ClassMethods)
   end
