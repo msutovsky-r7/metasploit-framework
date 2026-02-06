@@ -36,6 +36,7 @@ module Msf::Util::EXE
   include Msf::Util::EXE::OSX::Armle
   include Msf::Util::EXE::OSX::Aarch64
   include Msf::Util::EXE::OSX::Ppc
+  include Msf::Util::EXE::OSX::App
 
   include Msf::Util::EXE::Solaris::X86
 
