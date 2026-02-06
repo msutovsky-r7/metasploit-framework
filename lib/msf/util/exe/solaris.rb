@@ -1,9 +1,13 @@
 module Msf::Util::EXE::Solaris
-  def to_executable(framework, arch, code, fmt = 'elf', opts = {})
-    solaris = Object.new.extend(Msf::Util::EXE::Common)
-    # solaris.extend(Msf::Util::EXE::Solaris::Common) Solaris has no common module yet
-    solaris.extend(Msf::Util::EXE::Solaris::X86) if arch =~ /x86|i386/i
-    return solaris.to_executable(framework, code, opts, fmt) if solaris.respond_to?(:to_executable)
+  include Msf::Util::EXE::Common
+  include Msf::Util::EXE::Solaris::X86
+
+  def to_executable_solaris(framework, arch, code, fmt = 'elf', opts = {})
+    return to_executable_solaris_x86(framework, code, fmt, opts) if arch =~ /x86|i386/i
     nil
+  end
+
+  def to_executable_solaris_x86(framework, code, fmt = 'elf', opts = {})
+    return to_solaris_x86_elf(framework, code, opts) if fmt == 'elf'
   end
 end

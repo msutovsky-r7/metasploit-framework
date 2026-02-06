@@ -17,7 +17,7 @@ module Msf::Util::EXE::Linux
   include Msf::Util::EXE::Linux::X86
   include Msf::Util::EXE::Linux::Zarch
 
-  def to_executable(framework, arch, code, fmt = 'elf', opts = {})
+  def to_executable_linux(framework, arch, code, fmt = 'elf', opts = {})
     
     elf_formats = ['elf','elf-so']
     elf_fmt = 'elf'
@@ -40,12 +40,7 @@ module Msf::Util::EXE::Linux
     elf = to_executable_linux_loongarch64(framework, code, elf_fmt,opts) if arch == ARCH_LOONGARCH64
 
     return elf if elf_formats.include?(fmt) # Returning only the elf
-    
-    wrapped = nil
-    wrapped = Msf::Util::EXE::Windows::Common.to_jsp(exe) if fmt == 'jsp'
-    wrapped = Msf::Util::EXE::Windows::Common.to_jsp_war(exe) if fmt == 'war'
-
-    wrapped # Returning the wrapped exe on the desired format
+    nil # No wrapping formats for Linux yet, returning nil if the format is not an elf
   end
   
   def to_executable_linux_x64(framework, code, fmt = 'elf', opts = {})

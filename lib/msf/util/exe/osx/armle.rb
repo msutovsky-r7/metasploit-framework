@@ -6,10 +6,6 @@ module Msf::Util::EXE::OSX::Armle
   end
   
   module ClassMethods
-    def to_executable(framework, code, fmt='macho', opts = {})
-      return self.to_osx_arm_macho(framework, code, opts) if fmt == 'macho'
-    end
-    
     # Create an ARM Little Endian OSX Mach-O containing the payload provided in +code+
     # self.to_osx_arm_macho
     #
@@ -18,7 +14,7 @@ module Msf::Util::EXE::OSX::Armle
     # @param opts       [Hash]
     # @option           [String] :template
     # @return           [String]
-    def self.to_osx_arm_macho(framework, code, opts = {})
+    def to_osx_arm_macho(framework, code, opts = {})
       to_executable_with_template("template_armle_darwin.bin", framework, code, opts)
     end
   end

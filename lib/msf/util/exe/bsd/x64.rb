@@ -1,4 +1,4 @@
-module Msf::Util::EXE::BSD::X64
+module Msf::Util::EXE::Bsd::X64
   include Msf::Util::EXE::Common
 
   def self.included(base)

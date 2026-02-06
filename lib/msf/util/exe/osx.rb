@@ -1,13 +1,58 @@
 module Msf::Util::EXE::OSX
-  def to_executable(framework, arch, code, fmt = 'macho', opts = {})
-    osx = Object.new.extend(Msf::Util::EXE::Common)
-    osx.extend(Msf::Util::EXE::OSX::Common)
-    osx.extend(Msf::Util::EXE::OSX::X86) if arch =~ /x86|i386/i
-    osx.extend(Msf::Util::EXE::OSX::X64) if arch =~ /x64|amd64/i
-    osx.extend(Msf::Util::EXE::OSX::Armle) if arch =~ /armle|armv7/i
-    osx.extend(Msf::Util::EXE::OSX::Aarch64) if arch =~ /aarch64|arm64/i
-    return osx.to_executable(framework, code, opts, fmt) if osx.respond_to?(:to_executable)
+  include Msf::Util::EXE::Common
+  include Msf::Util::EXE::OSX::Common
+  include Msf::Util::EXE::OSX::X86
+  include Msf::Util::EXE::OSX::X64
+  include Msf::Util::EXE::OSX::Armle
+  include Msf::Util::EXE::OSX::Aarch64
 
-    nil
+  def self.included(base)
+    base.extend(ClassMethods)
+  end
+
+  module ClassMethods
+    def to_executable_osx(framework, arch, code, fmt = 'macho', opts = {})
+      exe_formats = ['macho', 'app']
+      exe_fmt = 'macho'
+      exe_fmt = fmt if exe_formats.include?(fmt)
+
+      exe = nil
+      exe = to_executable_osx_x86(framework, code, exe_fmt, opts) if arch =~ /x86|i386/i
+      exe = to_executable_osx_x64(framework, code, exe_fmt, opts) if arch =~ /x64|amd64/i
+      exe = to_executable_osx_armle(framework, code, exe_fmt, opts) if arch =~ /armle|armv7l/i
+      exe = to_executable_osx_aarch64(framework, code, exe_fmt, opts) if arch =~ /aarch64|arm64/i
+      exe = to_executable_osx_app(framework, code, exe_fmt, opts) if fmt == 'app'
+      exe = to_executable_osx_ppc(framework, code, exe_fmt, opts) if arch =~ /ppc|powerpc/i
+      
+      return exe if exe_formats.include?(fmt) # Returning only the exe
+      nil
+    end
+
+    def to_executable_osx_x86(framework, code, fmt = 'macho', opts = {})
+      return to_osx_x86_macho(framework, code, opts) if fmt == 'macho'
+    end
+
+    def to_executable_osx_x64(framework, code, fmt = 'macho', opts = {})
+      return to_osx_x64_macho(framework, code, opts) if fmt == 'macho'
+    end
+
+    def to_executable_osx_armle(framework, code, fmt = 'macho', opts = {})
+      return to_osx_armle_macho(framework, code, opts) if fmt == 'macho'
+    end
+
+    def to_executable_osx_aarch64(framework, code, fmt = 'macho', opts = {})
+      return to_osx_aarch64_macho(framework, code, opts) if fmt == 'macho'
+    end
+
+    def to_executable_osx_app(framework, code, fmt = 'app', opts = {})
+      return to_osx_app(code, opts) if fmt == 'app'
+    end
+
+    def to_executable_osx_ppc(framework, code, fmt = 'macho', opts = {})
+      return to_osx_ppc_macho(framework, code, opts) if fmt == 'macho'
+    end
+  end
+  class << self
+    include ClassMethods
   end
 end

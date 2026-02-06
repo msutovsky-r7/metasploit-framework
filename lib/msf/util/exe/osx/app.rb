@@ -6,9 +6,6 @@ module Msf::Util::EXE::OSX::App
   end
   
   module ClassMethods
-    def to_executable(framework, code, fmt='macho', opts = {})
-      return to_osx_app(code, opts) if fmt == 'app'
-    end
 
     # Create an OSX .app bundle containing the Mach-O executable provided in +exe+
     # to_osx_app

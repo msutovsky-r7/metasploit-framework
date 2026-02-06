@@ -7,10 +7,6 @@ module Msf::Util::EXE::OSX::Aarch64
   
   module ClassMethods
 
-    def to_executable(framework, code, fmt='macho', opts = {})
-      return to_osx_aarch64_macho(framework, code, opts) if fmt == 'macho'
-    end
-
     # Create an AARCH64 OSX Mach-O containing the payload provided in +code+
     # to_osx_aarch64_macho
     #

@@ -5,7 +5,7 @@ module Msf::Util::EXE::Windows
   include Msf::Util::EXE::Windows::X64
   include Msf::Util::EXE::Windows::X86
 
-  def to_executable(framework, arch, code, fmt = 'exe', opts = {})
+  def to_executable_windows(framework, arch, code, fmt = 'exe', opts = {})
     exe_formats = ['exe', 'exe-service', 'dll', 'dll-dccw-gdiplus']
 
     exe_fmt ||= 'exe-small' if ['vba-exe', 'vbs', 'loop-vbs', 'asp', 'aspx-exe'].include?(fmt)
