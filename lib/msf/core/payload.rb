@@ -172,6 +172,13 @@ class Payload < Msf::Module
   end
 
   #
+  # This method returns whether the payload has undefined CachedSize
+  #
+  def self.undefined_size?
+    csize = (const_defined?('CachedSize')) ? const_get('CachedSize') : nil
+    csize == :undefined
+  end
+  #
   # This method returns an optional cached size value
   #
   def cached_size
@@ -183,6 +190,13 @@ class Payload < Msf::Module
   #
   def dynamic_size?
       self.class.dynamic_size?
+  end
+
+  #
+  # This method returns whether the payload has undefined CachedSize
+  #
+  def undefined_size?
+      self.class.undefined_size?
   end
 
   #
