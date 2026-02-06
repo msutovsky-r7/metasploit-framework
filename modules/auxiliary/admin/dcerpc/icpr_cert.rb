@@ -34,7 +34,9 @@ class MetasploitModule < Msf::Auxiliary
         'References' => [
           [ 'URL', 'https://posts.specterops.io/certified-pre-owned-d95910965cd2' ],
           [ 'URL', 'https://github.com/GhostPack/Certify' ],
-          [ 'URL', 'https://github.com/ly4k/Certipy' ]
+          [ 'URL', 'https://github.com/ly4k/Certipy' ],
+          [ 'ATT&CK', Mitre::Attack::Technique::T1649_STEAL_OR_FORGE_AUTHENTICATION_CERTIFICATES ],
+          [ 'ATT&CK', Mitre::Attack::Technique::T1552_004_PRIVATE_KEYS ]
         ],
         'Notes' => {
           'Reliability' => [],

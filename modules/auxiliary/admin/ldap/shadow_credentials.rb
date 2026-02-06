@@ -28,7 +28,9 @@ class MetasploitModule < Msf::Auxiliary
         ],
         'References' => [
           ['URL', 'https://posts.specterops.io/shadow-credentials-abusing-key-trust-account-mapping-for-takeover-8ee1a53566ab'],
-          ['URL', 'https://www.ired.team/offensive-security-experiments/active-directory-kerberos-abuse/shadow-credentials']
+          ['URL', 'https://www.ired.team/offensive-security-experiments/active-directory-kerberos-abuse/shadow-credentials'],
+          ['ATT&CK', Mitre::Attack::Technique::T1098_ACCOUNT_MANIPULATION],
+          ['ATT&CK', Mitre::Attack::Technique::T1556_006_MULTI_FACTOR_AUTHENTICATION]
         ],
         'License' => MSF_LICENSE,
         'Actions' => [
