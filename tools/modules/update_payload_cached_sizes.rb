@@ -26,7 +26,7 @@ require 'rex'
 # Initialize the simplified framework instance.
 exceptions = []
 
-# Create dummy config file to avoid using locally saved options
+# Use dummy config file to avoid using locally saved options
 dummy_config = File.expand_path(File.join(File.dirname(msfbase), '..', '..', 'spec', 'dummy','framework','config'))
 
 framework = Msf::Simple::Framework.create({'DeferModuleLoads' => true, 'ConfigDirectory' => dummy_config})
