@@ -285,7 +285,7 @@ RSpec.describe 'dcerpc icpr_cert' do
 
   describe '#build_csr' do
     let(:result) do
-      subject.send(:build_csr,
+      subject.send(:Rex::Proto::X509::Request.build_csr,
         cn: 'aliddle',
         private_key: pkcs12_key
       )
@@ -308,7 +308,7 @@ RSpec.describe 'dcerpc icpr_cert' do
     context 'when passed a bad algorithm' do
       it 'raises a RuntimeError if the algorithm does not exist' do
         expect {
-          subject.send(:build_csr,
+          subject.send(:Rex::Proto::X509::Request.build_csr,
             cn: 'aliddle',
             private_key: pkcs12_key,
             algorithm: 'METASPLOIT'
@@ -321,7 +321,7 @@ RSpec.describe 'dcerpc icpr_cert' do
   describe '#build_on_behalf_of' do
     context 'when building' do
       let(:result) do
-        subject.send(:build_on_behalf_of,
+        subject.send(:Rex::Proto::X509::Request.build_on_behalf_of,
           csr: x509_csr,
           on_behalf_of: 'MSFLAB\\smcintyre',
           cert: pkcs12_certificate,
