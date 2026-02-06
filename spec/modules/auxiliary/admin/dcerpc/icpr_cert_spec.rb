@@ -1,5 +1,6 @@
 require 'rspec'
 require 'rex/proto/kerberos/model/pkinit'
+require 'rex/proto/x509/request'
 
 RSpec.describe 'dcerpc icpr_cert' do
   include_context 'Msf::UIDriver'
