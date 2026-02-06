@@ -1,5 +1,6 @@
 module Msf::Util::EXE::Linux::Zarch
-include Msf::Util::EXE::Linux::Common
+  include Msf::Util::EXE::Common
+  include Msf::Util::EXE::Linux::Common
   
   def self.included(base)
     base.extend(ClassMethods)
@@ -15,7 +16,7 @@ include Msf::Util::EXE::Linux::Common
     # @option           [String] :template
     # @return           [String] Returns an elf
     def to_linux_zarch_elf(framework, code, opts = {})
-      Msf::Util::EXE::Common.to_exe_elf(framework, opts, "template_zarch_linux.bin", code)
+      to_exe_elf(framework, opts, "template_zarch_linux.bin", code)
     end
 
     # Create a ZARCH Linux ELF_DYN containing the payload provided in +code+
@@ -26,7 +27,7 @@ include Msf::Util::EXE::Linux::Common
     # @option           [String] :template
     # @return           [String] Returns an elf
     def to_linux_zarch_elf_dll(framework, code, opts = {})
-      Msf::Util::EXE::Common.to_exe_elf(framework, opts, "template_zarch_linux_dll.bin", code)
+      to_exe_elf(framework, opts, "template_zarch_linux_dll.bin", code)
     end
   end
 

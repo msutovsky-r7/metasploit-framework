@@ -1,22 +1,24 @@
 module Msf::Util::EXE::Linux::Mipsle
-include Msf::Util::EXE::Linux::Common
+  include Msf::Util::EXE::Common
+  include Msf::Util::EXE::Linux::Common
+
   def self.included(base)
     base.extend(ClassMethods)
   end
   
   module ClassMethods
   
-  # Create a MIPSLE 64-bit LE Linux ELF containing the payload provided in +code+
-  # to_linux_mipsle_elf
-  #
-  # @param framework [Msf::Framework]
-  # @param code       [String]
-  # @param opts       [Hash]
-  # @option           [String] :template
-  # @return           [String] Returns an elf
-  def to_linux_mipsle_elf(framework, code, opts = {})
-    Msf::Util::EXE::Common.to_exe_elf(framework, opts, "template_mipsle_linux.bin", code)
-  end
+    # Create a MIPSLE 64-bit LE Linux ELF containing the payload provided in +code+
+    # to_linux_mipsle_elf
+    #
+    # @param framework [Msf::Framework]
+    # @param code       [String]
+    # @param opts       [Hash]
+    # @option           [String] :template
+    # @return           [String] Returns an elf
+    def to_linux_mipsle_elf(framework, code, opts = {})
+      to_exe_elf(framework, opts, "template_mipsle_linux.bin", code)
+    end
   end
 
   class << self

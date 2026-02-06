@@ -1,5 +1,6 @@
 module Msf::Util::EXE::Linux::X86
-include Msf::Util::EXE::Linux::Common
+  include Msf::Util::EXE::Common
+  include Msf::Util::EXE::Linux::Common
 
 
   def self.included(base)
@@ -19,7 +20,7 @@ include Msf::Util::EXE::Linux::Common
     def to_linux_x86_elf(framework, code, opts = {})
       default = true unless opts[:template]
 
-      return Msf::Util::EXE::Common.to_exe_elf(framework, opts, "template_x86_linux.bin", code) if default
+      return to_exe_elf(framework, opts, "template_x86_linux.bin", code) if default
       return to_linux_x86_custom_elf(framework, code, opts)
     end
 
@@ -35,7 +36,7 @@ include Msf::Util::EXE::Linux::Common
       # Use set_template_default to normalize the :template key. It will just end up doing
       # opts[:template] = File.join(opts[:template_path], opts[:template])
       # for us, check if the file exists.
-      Msf::Util::EXE::Common.set_template_default(opts, 'template_x86_linux.bin')
+      set_template_default(opts, 'template_x86_linux.bin')
 
       # If this isn't our normal template, we have to do some fancy
       # header patching to mark the .text section rwx before putting our
@@ -75,7 +76,7 @@ include Msf::Util::EXE::Linux::Common
     # @option           [String] :template
     # @return           [String] Returns an elf
     def to_linux_x86_elf_dll(framework, code, opts = {})
-      Msf::Util::EXE::Common.to_exe_elf(framework, opts, "template_x86_linux_dll.bin", code)
+      to_exe_elf(framework, opts, "template_x86_linux_dll.bin", code)
     end
   end
 

@@ -1,4 +1,5 @@
 module Msf::Util::EXE::Windows::X64
+  include Msf::Util::EXE::Common
   include Msf::Util::EXE::Windows::Common
   
   def self.included(base)
@@ -71,7 +72,7 @@ module Msf::Util::EXE::Windows::X64
       return appender.generate_pe
     end
 
-    # self.to_win64pe_service
+    # to_win64pe_service
     #
     # @param framework  [Msf::Framework]  The framework of you want to use
     # @param code       [String]
@@ -81,14 +82,14 @@ module Msf::Util::EXE::Windows::X64
     # @option           [String] :dll
     # @option           [String] :inject
     # @return           [String]
-    def self.to_win64pe_service(framework, code, opts = {})
+    def to_win64pe_service(framework, code, opts = {})
       # Allow the user to specify their own service EXE template
       set_template_default(opts, "template_x64_windows_svc.exe")
       opts[:exe_type] = :service_exe
       exe_sub_method(code,opts)
     end
 
-      # self.to_win64pe_dll
+      # to_win64pe_dll
     #
     # @param framework  [Msf::Framework]  The framework of you want to use
     # @param code       [String]
@@ -97,7 +98,7 @@ module Msf::Util::EXE::Windows::X64
     # @option           [String] :dll
     # @option           [String] :inject
     # @return           [String]
-    def self.to_win64pe_dll(framework, code, opts = {})
+    def to_win64pe_dll(framework, code, opts = {})
       flavor = opts.fetch(:mixed_mode, false) ? 'mixed_mode' : nil
       set_template_default_winpe_dll(opts, ARCH_X64, code.size, flavor: flavor)
 
@@ -119,7 +120,7 @@ module Msf::Util::EXE::Windows::X64
     # @option           [String] :dll
     # @option           [String] :inject
     # @return           [String]
-    def self.to_win64pe_dccw_gdiplus_dll(framework, code, opts = {})
+    def to_win64pe_dccw_gdiplus_dll(framework, code, opts = {})
       set_template_default_winpe_dll(opts, ARCH_X64, code.size, flavor: 'dccw_gdiplus')
       to_win64pe_dll(framework, code, opts)
     end

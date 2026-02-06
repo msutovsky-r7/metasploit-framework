@@ -6,11 +6,6 @@ module Msf::Util::EXE::Bsd::X64
   end
 
   module ClassMethods
-    def to_executable(framework, code, fmt='elf', opts = {})
-      return to_bsd_x64_elf(framework, code, opts) if fmt == 'elf'
-      #return to_bsd_x64_elf_dll(framework, code, opts) if fmt == 'elf-so' Not yet implemented
-    end
-
     # Create a 64-bit Linux ELF containing the payload provided in +code+
     #
     # @param framework [Msf::Framework]

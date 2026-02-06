@@ -1,8 +1,9 @@
 module Msf::Util::EXE::OSX::Armle
+  include Msf::Util::EXE::Common
   include Msf::Util::EXE::OSX::Common
   
   def self.included(base)
-    base.extend(base)
+    base.extend(ClassMethods)
   end
   
   module ClassMethods

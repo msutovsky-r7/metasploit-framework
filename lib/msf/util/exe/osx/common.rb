@@ -1,6 +1,10 @@
 module Msf::Util::EXE::OSX::Common
   include Msf::Util::EXE::Common
-  
+  def self.included(base)
+    base.extend(ClassMethods)
+  end
+
+  module ClassMethods
     def to_executable_with_template(template_name, framework, code, opts = {})
       # Allow the user to specify their own template
       set_template_default(opts, template_name)
@@ -10,4 +14,8 @@ module Msf::Util::EXE::OSX::Common
       mo[bo, code.length] = code
       mo
     end
+  end
+  class << self
+    include ClassMethods
+  end
 end

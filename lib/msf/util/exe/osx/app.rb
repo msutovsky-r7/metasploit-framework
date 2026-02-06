@@ -1,4 +1,5 @@
 module Msf::Util::EXE::OSX::App
+  include Msf::Util::EXE::Common
   include Msf::Util::EXE::OSX::Common
   
   def self.included(base)

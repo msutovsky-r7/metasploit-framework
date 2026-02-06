@@ -1,15 +1,12 @@
 module Msf::Util::EXE::OSX::X64
+  include Msf::Util::EXE::Common
   include Msf::Util::EXE::OSX::Common
 
   def self.included(base)
     base.extend(ClassMethods)
   end
 
-  module ClassMethods
-    def to_executable(framework, code, fmt='macho', opts = {})
-      return to_osx_x64_macho(framework, code, opts) if fmt == 'macho'
-    end
-    
+  module ClassMethods    
     # Create an x86_64 OSX Mach-O containing the payload provided in +code+  
     # self.to_osx_x64_macho
     #
