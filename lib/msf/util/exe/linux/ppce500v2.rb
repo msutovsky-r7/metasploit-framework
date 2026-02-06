@@ -1,4 +1,4 @@
-module Msf::Util::EXE::Linux::Mipsbe
+module Msf::Util::EXE::Linux::Ppce500v2
 include Msf::Util::EXE::Linux::Common
   def self.included(base)
     base.extend(ClassMethods)
@@ -6,21 +6,22 @@ include Msf::Util::EXE::Linux::Common
   
   module ClassMethods
 
-  # Create a MIPSBE 64-bit BE Linux ELF containing the payload provided in +code+
-  # to_linux_mipsbe_elf
+  # Create a PPC64 64-bit BE Linux ELF containing the payload provided in +code+
+  # to_linux_ppce500v2_elf
   #
   # @param framework [Msf::Framework]
   # @param code       [String]
   # @param opts       [Hash]
   # @option           [String] :template
   # @return           [String] Returns an elf
-  def to_linux_mipsbe_elf(framework, code, opts = {})
-    to_exe_elf(framework, opts, "template_mipsbe_linux.bin", code, true)
+  def to_linux_ppce500v2_elf(framework, code, opts = {})
+    Msf::Util::EXE::Common.to_exe_elf(framework, opts, "template_ppce500v2_linux.bin", code, true)
   end
   end
 
   class << self
     include ClassMethods
   end
+
 
 end

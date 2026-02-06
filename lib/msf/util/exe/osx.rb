@@ -10,4 +10,4 @@ module Msf::Util::EXE::OSX
 
     nil
   end
-
+end

@@ -1,10 +1,12 @@
 module Msf::Util::EXE::Linux::Riscv32le
-  include Msf::Util::EXE::Linux::Common
+include Msf::Util::EXE::Linux::Common
+  
+  def self.included(base)
+    base.extend(ClassMethods)
+  end
+  
+  module ClassMethods
 
-  def to_executable(framework, code, fmt='elf', opts = {})
-    return to_linux_riscv32le_elf(framework, code, opts) if fmt == 'elf'
-    return to_linux_riscv32le_elf_dll(framework, code, opts) if fmt == 'elf-so'
-  end  
   # Create a RISC-V 32-bit LE Linux ELF containing the payload provided in +code+
   # to_linux_riscv32le_elf
   #
@@ -14,7 +16,7 @@ module Msf::Util::EXE::Linux::Riscv32le
   # @option           [String] :template
   # @return           [String] Returns an elf
   def to_linux_riscv32le_elf(framework, code, opts = {})
-    to_exe_elf(framework, opts, "template_riscv32le_linux.bin", code)
+    Msf::Util::EXE::Common.to_exe_elf(framework, opts, "template_riscv32le_linux.bin", code)
   end
 
   # Create a RISC-V 32-bit LE Linux ELF_DYN containing the payload provided in +code+
@@ -26,6 +28,12 @@ module Msf::Util::EXE::Linux::Riscv32le
   # @option           [String] :template
   # @return           [String] Returns an elf
   def to_linux_riscv32le_elf_dll(framework, code, opts = {})
-    to_exe_elf(framework, opts, "template_riscv32le_linux_dll.bin", code)
+    Msf::Util::EXE::Common.to_exe_elf(framework, opts, "template_riscv32le_linux_dll.bin", code)
   end
+  end
+
+  class << self
+    include ClassMethods
+  end
+
 end

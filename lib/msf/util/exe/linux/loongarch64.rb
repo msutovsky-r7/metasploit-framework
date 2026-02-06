@@ -1,10 +1,10 @@
 module Msf::Util::EXE::Linux::Loongarch64
-  include Msf::Util::EXE::Linux::Common
-
-  def to_executable(framework, code, fmt='elf', opts = {})
-    return to_linux_loongarch64_elf(framework, code, opts) if fmt == 'elf'
-    return to_linux_loongarch64_elf_dll(framework, code, opts) if fmt == 'elf-so'
+include Msf::Util::EXE::Linux::Common
+  def self.included(base)
+    base.extend(ClassMethods)
   end
+  
+  module ClassMethods
 
   # Create a LOONGARCH64 64-bit LE Linux ELF containing the payload provided in +code+
   # to_linux_loongarch64_elf
@@ -29,4 +29,10 @@ module Msf::Util::EXE::Linux::Loongarch64
   def to_linux_loongarch64_elf_dll(framework, code, opts = {})
     to_exe_elf(framework, opts, "template_loongarch64_linux_dll.bin", code)
   end
+  end
+
+  class << self
+    include ClassMethods
+  end
+
 end

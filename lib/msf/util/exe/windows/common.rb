@@ -1,4 +1,4 @@
-class Msf::Util::EXE::Windows::Common
+module Msf::Util::EXE::Windows::Common
 
   # exe_sub_method
   #
@@ -87,7 +87,7 @@ class Msf::Util::EXE::Windows::Common
   # @param arch The architecture, as one the predefined constants.
   # @param size [Integer] The size of the payload.
   # @param flavor [Nil,String] An optional DLL flavor, one of 'mixed_mode' or 'dccw_gdiplus'
-  private_class_method def set_template_default_winpe_dll(opts, arch, size, flavor: nil)
+  def set_template_default_winpe_dll(opts, arch, size, flavor: nil)
     return if opts[:template].present?
 
     # dynamic size upgrading is only available when MSF selects the template because there's currently no way to
