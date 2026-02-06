@@ -1,4 +1,5 @@
 module Msf::Util::EXE::Linux::Riscv64le
+include Msf::Util::EXE::Linux::Common
   def self.included(base)
     base.extend(ClassMethods)
   end

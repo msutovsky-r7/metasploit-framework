@@ -1,4 +1,5 @@
 module Msf::Util::EXE::Linux::Ppce500v2
+include Msf::Util::EXE::Linux::Common
   def self.included(base)
     base.extend(ClassMethods)
   end

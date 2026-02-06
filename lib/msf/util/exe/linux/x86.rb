@@ -1,4 +1,5 @@
 module Msf::Util::EXE::Linux::X86
+include Msf::Util::EXE::Linux::Common
 
 
   def self.included(base)

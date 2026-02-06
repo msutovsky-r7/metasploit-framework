@@ -1,4 +1,7 @@
 module Msf::Util::EXE::Windows::X64
+  
+  include Msf::Util::EXE::Windows::Common
+
   def self.included(base)
     base.extend(ClassMethods)
   end
