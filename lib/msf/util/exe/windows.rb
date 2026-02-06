@@ -1,5 +1,6 @@
 module Msf::Util::EXE::Windows
   include Msf::Util::EXE::Common
+  include Msf::Util::EXE::Windows::Common
   include Msf::Util::EXE::Windows::Aarch64
   include Msf::Util::EXE::Windows::X64
   include Msf::Util::EXE::Windows::X86
