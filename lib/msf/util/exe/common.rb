@@ -8,7 +8,7 @@ module Msf::Util::EXE::Common
   require 'metasm'
   require 'digest/sha1'
 
-  def self.incuded(base)
+  def self.included(base)
     base.extend(ClassMethods)
   end
 
