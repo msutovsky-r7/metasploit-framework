@@ -15,7 +15,7 @@ include Msf::Util::EXE::Linux::Common
   # @option           [String] :template
   # @return           [String] Returns an elf
   def to_linux_mipsbe_elf(framework, code, opts = {})
-    Msf::Util::EXE::Common.to_exe_elf(framework, opts, "template_mipsbe_linux.bin", code, true)
+    to_exe_elf(framework, opts, "template_mipsbe_linux.bin", code, true)
   end
   end
 
