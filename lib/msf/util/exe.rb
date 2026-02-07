@@ -282,13 +282,13 @@ module Msf::Util::EXE
         arch ||= [ ARCH_X86 ]
         tmp_plat = plat.platforms if plat
         tmp_plat ||= Msf::Module::PlatformList.transform('win')
-        exe = Msf::Util::EXE.to_executable(framework, arch, tmp_plat, code, exeopts)
+        exe = Msf::Util::EXE.to_executable(framework, arch, tmp_plat, code, fmt, exeopts)
         Msf::Util::EXE.to_jsp(exe)
       when 'war'
         arch ||= [ ARCH_X86 ]
         tmp_plat = plat.platforms if plat
         tmp_plat ||= Msf::Module::PlatformList.transform('win')
-        exe = Msf::Util::EXE.to_executable(framework, arch, tmp_plat, code, exeopts)
+        exe = Msf::Util::EXE.to_executable(framework, arch, tmp_plat, code, fmt, exeopts)
         Msf::Util::EXE.to_jsp_war(exe)
       when 'psh'
         Msf::Util::EXE.to_win32pe_psh(framework, code, exeopts)
