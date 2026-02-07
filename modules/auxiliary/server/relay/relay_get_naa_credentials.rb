@@ -32,7 +32,7 @@ class MetasploitModule < Msf::Auxiliary
         ['URL', 'https://github.com/Mayyhem/SharpSCCM'],
         ['URL', 'https://github.com/garrettfoster13/sccmhunter'],
         ['ATT&CK', Mitre::Attack::Technique::T1557_ADVERSARY_IN_THE_MIDDLE],
-        ['ATT&CK', Mitre::Attack::Technique::T1552_UNSECURED_CREDENTIALS]
+        ['ATT&CK', Mitre::Attack::Technique::T1552_001_CREDENTIALS_IN_FILES]
       ],
       'DefaultOptions' => {
         'RPORT' => 80
