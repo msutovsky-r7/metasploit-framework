@@ -8,7 +8,7 @@ module Msf::Util::EXE::Solaris
 
   module ClassMethods
     def to_executable_solaris(framework, arch, code, fmt = 'elf', opts = {})
-      return to_executable_solaris_x86(framework, code, fmt, opts) if arch =~ /x86|i386/i
+      return to_executable_solaris_x86(framework, code, fmt, opts) if arch.index(ARCH_X86)
       nil
     end
 

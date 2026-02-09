@@ -17,12 +17,12 @@ module Msf::Util::EXE::OSX
       exe_fmt = fmt if exe_formats.include?(fmt)
 
       exe = nil
-      exe = to_executable_osx_x86(framework, code, exe_fmt, opts) if arch =~ /x86|i386/i
-      exe = to_executable_osx_x64(framework, code, exe_fmt, opts) if arch =~ /x64|amd64/i
-      exe = to_executable_osx_armle(framework, code, exe_fmt, opts) if arch =~ /armle|armv7l/i
-      exe = to_executable_osx_aarch64(framework, code, exe_fmt, opts) if arch =~ /aarch64|arm64/i
+      exe = to_executable_osx_x86(framework, code, exe_fmt, opts) if arch.index(ARCH_X86)
+      exe = to_executable_osx_x64(framework, code, exe_fmt, opts) if arch.index(ARCH_X64)
+      exe = to_executable_osx_armle(framework, code, exe_fmt, opts) if arch.index(ARCH_ARMLE)
+      exe = to_executable_osx_aarch64(framework, code, exe_fmt, opts) if arch.index(ARCH_AARCH64)
       exe = to_executable_osx_app(framework, code, exe_fmt, opts) if fmt == 'app'
-      exe = to_executable_osx_ppc(framework, code, exe_fmt, opts) if arch =~ /ppc|powerpc/i
+      exe = to_executable_osx_ppc(framework, code, exe_fmt, opts) if arch.index(ARCH_PPC)
       
       return exe if exe_formats.include?(fmt) # Returning only the exe
       nil

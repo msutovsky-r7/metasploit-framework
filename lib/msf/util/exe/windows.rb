@@ -20,10 +20,9 @@ module Msf::Util::EXE::Windows
       exe_fmt = fmt if exe_formats.include?(fmt)
 
       exe = nil
-      exe = to_executable_windows_x86(framework, code, exe_fmt, opts) if arch =~ /x86|i386/i
-      exe = to_executable_windows_x64(framework, code, exe_fmt, opts) if arch =~ /x64|amd64/i
-      exe = to_executable_windows_aarch64(framework, code, exe_fmt, opts) if arch =~ /aarch64|arm64/i
-
+      exe = to_executable_windows_x86(framework, code, exe_fmt, opts) if arch.index(ARCH_X86)
+      exe = to_executable_windows_x64(framework, code, exe_fmt, opts) if arch.index(ARCH_X64) 
+      exe = to_executable_windows_aarch64(framework, code, exe_fmt, opts) if arch.index(ARCH_AARCH64) 
       return exe if exe_formats.include?(fmt) # Returning only the exe
 
       wrapped = nil
