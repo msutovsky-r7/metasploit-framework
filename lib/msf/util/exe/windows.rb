@@ -24,6 +24,20 @@ module Msf::Util::EXE::Windows
       exe = to_executable_windows_x64(framework, code, exe_fmt, opts) if arch.index(ARCH_X64) 
       exe = to_executable_windows_aarch64(framework, code, exe_fmt, opts) if arch.index(ARCH_AARCH64) 
       return exe if exe_formats.include?(fmt) # Returning only the exe
+
+      wrapped = nil
+      wrapped = to_exe_asp(exe, opts) if fmt == 'asp'
+      wrapped = to_mem_aspx(exe, opts) if fmt == 'aspx'
+      wrapped = to_exe_aspx(exe, opts) if fmt == 'aspx-exe'
+      wrapped = to_exe_msi(exe, opts.merge({ uac: true })) if fmt == 'msi'
+      wrapped = to_exe_msi(exe, opts) if fmt == 'msi-nouac'
+      wrapped = to_exe_vba(exe) if fmt == 'vba-exe'
+      wrapped = to_exe_vbs(exe, opts.merge({ persist: false })) if fmt == 'vbs'
+      wrapped = to_exe_vbs(exe, opts.merge({ persist: true })) if fmt == 'loop-vbs'
+      wrapped = to_jsp(exe) if fmt == 'jsp'
+      wrapped = to_jsp_war(exe) if fmt == 'war'
+
+      wrapped # Returning the wrapped exe on the desired format
     end
 
     def to_executable_windows_aarch64(framework, code, fmt = 'exe', opts = {})
