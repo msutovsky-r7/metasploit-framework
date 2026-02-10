@@ -17,7 +17,7 @@ module Msf::Util::EXE::OSX::X86
     # @return           [String]
     def to_osx_x86_macho(framework, code, opts = {})
       mo = to_executable_with_template("template_x86_darwin.bin", framework, code, opts)
-      Payload::MachO.new(mo).sign
+      Msf::Payload::MachO.new(mo).sign
       mo
     end
   end

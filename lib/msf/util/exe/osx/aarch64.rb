@@ -18,7 +18,7 @@ module Msf::Util::EXE::OSX::Aarch64
     # @return           [String]
     def to_osx_aarch64_macho(framework, code, opts = {})
       mo = to_executable_with_template("template_aarch64_darwin.bin", framework, code, opts)
-      Payload::MachO.new(mo).sign
+      Msf::Payload::MachO.new(mo).sign
       mo
     end
   end
