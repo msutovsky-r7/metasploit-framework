@@ -185,5 +185,6 @@ class MetasploitModule < Msf::Auxiliary
 
     # output table
     print(@saptbl.to_s)
+
   end
 end
