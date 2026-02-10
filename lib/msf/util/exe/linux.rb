@@ -45,7 +45,6 @@ module Msf::Util::EXE::Linux
       elf = to_executable_linux_loongarch64(framework, code, elf_fmt,opts) if arch.index(ARCH_LOONGARCH64)
 
       return elf if elf_formats.include?(fmt) # Returning only the elf
-      nil # No wrapping formats for Linux yet, returning nil if the format is not an elf
     end
     
     def to_executable_linux_x64(framework, code, fmt = 'elf', opts = {})

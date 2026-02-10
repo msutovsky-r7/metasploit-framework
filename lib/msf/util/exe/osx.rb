@@ -25,7 +25,6 @@ module Msf::Util::EXE::OSX
       exe = to_executable_osx_ppc(framework, code, exe_fmt, opts) if arch.index(ARCH_PPC)
       
       return exe if exe_formats.include?(fmt) # Returning only the exe
-      nil
     end
 
     def to_executable_osx_x86(framework, code, fmt = 'macho', opts = {})
