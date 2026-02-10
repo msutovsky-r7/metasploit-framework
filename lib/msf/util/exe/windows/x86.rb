@@ -340,7 +340,27 @@ module Msf::Util::EXE::Windows::X86
       opts[:exe_type] = :service_exe
       exe_sub_method(code,opts)
     end
+    
+    # to_win32pe_dll
+    #
+    # @param framework  [Msf::Framework]  The framework of you want to use
+    # @param code       [String]
+    # @param opts       [Hash]
+    # @option           [String] :exe_type
+    # @option           [String] :dll
+    # @option           [String] :inject
+    # @return           [String]
+    def to_win32pe_dll(framework, code, opts = {})
+      flavor = opts.fetch(:mixed_mode, false) ? 'mixed_mode' : nil
+      set_template_default_winpe_dll(opts, ARCH_X86, code.size, flavor: flavor)
+      opts[:exe_type] = :dll
 
+      if opts[:inject]
+        to_win32pe(framework, code, opts)
+      else
+        exe_sub_method(code, opts)
+      end
+    end
 
 
     # to_win32pe_dccw_gdiplus_dll

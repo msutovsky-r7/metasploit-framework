@@ -49,7 +49,7 @@ module Msf::Util::EXE
 
   module ClassMethods
 
-    # self.to_executable
+    # to_executable
     #
     # @param framework [Msf::Framework]
     # @param arch     [String]

@@ -89,7 +89,7 @@ module Msf::Util::EXE::Windows::X64
       exe_sub_method(code,opts)
     end
 
-      # to_win64pe_dll
+    # to_win64pe_dll
     #
     # @param framework  [Msf::Framework]  The framework of you want to use
     # @param code       [String]
@@ -111,7 +111,7 @@ module Msf::Util::EXE::Windows::X64
       end
     end
     
-    # self.to_win64pe_dccw_gdiplus_dll
+    # to_win64pe_dccw_gdiplus_dll
     #
     # @param framework  [Msf::Framework]  The framework of you want to use
     # @param code       [String]
