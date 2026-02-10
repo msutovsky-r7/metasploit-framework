@@ -73,7 +73,7 @@ module Msf::Sessions
 
         ssh_channel.on_eof do |_ch|
           dlog('ssh_channel#on_eof shutting down the socket')
-          rsock.shutdown(Socket::SHUT_WR)
+          lsock.shutdown(Socket::SHUT_WR)
         end
 
         lsock.extend(SocketInterface)
@@ -313,7 +313,7 @@ module Msf::Sessions
           if success
             if timed_out
               # We're not using the port; clean it up
-              elog("Remote forwarding on #{Rex::Socket.to_authority(params.localhost, params.localport)} succeeded after timeout. Stopping channel to clean up dangling port")
+              elog("Remote forwarding on #{Rex::Socket.to_authority(params.localhost, params.localport)} succeeded after timeout, stopping channel to clean up dangling port")
               stop_server_channel(params.localhost, params.localport)
             else
               dlog("Remote forwarding from #{params.localhost} established on port #{params.localport}")
