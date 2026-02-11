@@ -3,6 +3,7 @@
 This folder maintains the docs for https://docs.metasploit.com/ and https://github.com/rapid7/metasploit-framework/wiki
 
 ## Architecture
+
 This section explains how the documentation site is generated and deployed.
 
 How it works:
