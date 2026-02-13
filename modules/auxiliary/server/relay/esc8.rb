@@ -24,6 +24,7 @@ class MetasploitModule < Msf::Auxiliary
       ],
       'License' => MSF_LICENSE,
       'Actions' => [[ 'Relay', { 'Description' => 'Run SMB ESC8 relay server' } ]],
+      'DefaultOptions' => { 'Http::Auth' => 'ntlm' },
       'PassiveActions' => [ 'Relay' ],
       'DefaultAction' => 'Relay'
     })
@@ -85,21 +86,25 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def validate
-    super
+    errors = {}
     unless datastore['HTTP::Auth'] == 'ntlm'
-      fail_with(Failure::BadConfig, 'This module only supports NTLM')
+      errors['HTTP::Auth'] = 'This module only supports NTLM authentication.'
     end
 
     case datastore['MODE']
     when 'SPECIFIC_TEMPLATE'
       if datastore['CERT_TEMPLATE'].blank?
-        raise Msf::OptionValidateError.new({ 'CERT_TEMPLATE' => 'CERT_TEMPLATE must be set when MODE is SPECIFIC_TEMPLATE' })
+        errors['CERT_TEMPLATE'] = 'CERT_TEMPLATE must be set when MODE is SPECIFIC_TEMPLATE.'
       end
     when 'ALL', 'AUTO', 'QUERY_ONLY'
       unless datastore['CERT_TEMPLATE'].nil? || datastore['CERT_TEMPLATE'].blank?
         print_warning('CERT_TEMPLATE is ignored in ALL, AUTO, and QUERY_ONLY modes.')
       end
     end
+
+    raise OptionValidateError, errors unless errors.empty?
+
+    super
   end
 
   def run
