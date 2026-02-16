@@ -83,7 +83,7 @@ class MetasploitModule < Msf::Auxiliary
         'password' => datastore['PASSWORD']
       }.to_json
     )
-
+    return false unless res
     return true if res&.code == 200
 
     json_data = res.get_json_document
