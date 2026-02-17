@@ -535,7 +535,7 @@ class Payload < Msf::Module
     configure_encoder = lambda do |encoder|
       if payload.datastore.is_a?(Msf::DataStore)
         payload_defaults = { 'ENCODER' => encoder }
-        payload.datastore.import_defaults_from_hash(payload_defaults, imported_by: 'choose_encoder')
+         mod.datastore.import_defaults_from_hash(payload_defaults, imported_by: 'choose_encoder')
       else
         payload.datastore['ENCODER'] = encoder
       end
