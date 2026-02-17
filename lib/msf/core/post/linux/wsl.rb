@@ -9,7 +9,7 @@ module Msf
         # Returns a boolean if the kernel includes WSL indicators
         #
         def wsl?
-          kernel_release.include?('-Microsoft')
+          kernel_release.downcase.include?('-microsoft')
         end
       end
     end
