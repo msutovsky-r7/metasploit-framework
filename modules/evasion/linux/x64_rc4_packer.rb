@@ -17,12 +17,12 @@ class MetasploitModule < Msf::Evasion
         'Description'    => %q{
           This module generates a Linux ELF executable with RC4 encryption
           and optional sleep-based sandbox evasion.
+
+          The evasion module works on systems with Linux Kernel > 3.17 due to memfd_create support.
           
           Features:
           - RC4 encryption with configurable key
-          - In-memory decryption and execution
-          - Optional sleep delay for sandbox evasion
-          - Position-independent shellcode
+          - Fileless execution via memfd_create
         },
         'Author'         => ['Massimo Bertocchi'],
         'License'        => MSF_LICENSE,
