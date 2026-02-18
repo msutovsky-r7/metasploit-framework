@@ -1,7 +1,8 @@
 require 'rasn1'
 
 module Rex::Proto::Gss
-
+  # Initial negotiation token
+  # https://datatracker.ietf.org/doc/html/rfc4178#section-4.2
   class MechType < RASN1::Types::ObjectId
   end
 
