@@ -34,5 +34,9 @@ module Rex::Proto::Gss
     def mech_token
       self[:gssapi][:neg_token_init][:mech_token].value
     end
+
+    def mech_type_list
+      self[:gssapi][:neg_token_init][:mech_type_list][:mech_type]
+    end
   end
 end
