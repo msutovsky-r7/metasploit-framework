@@ -17,10 +17,7 @@ class MetasploitModule < Msf::Evasion
         'Description'    => %q{
           This evasion module packs Linux payloads using RC4 encryption
           and executes them from memory using memfd_create for fileless execution.
-          
-          Features:
-          - RC4 encryption with configurable key size
-          - Fileless execution via memfd_create
+          Linux kernel version support: 3.17+
         },
         'Author'         => ['Massimo Bertocchi'],
         'License'        => MSF_LICENSE,
