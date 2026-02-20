@@ -42,7 +42,7 @@ class MetasploitModule < Msf::Evasion
   def run
 
     raw_payload = payload.encoded
-    unless raw_payload && raw_payload.length > 0
+    if raw_payload.blank?
       fail_with(Failure::BadConfig, "Failed to generate payload")
     end
     
