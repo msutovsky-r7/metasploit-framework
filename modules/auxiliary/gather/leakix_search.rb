@@ -44,8 +44,7 @@ class MetasploitModule < Msf::Auxiliary
         ],
         'References' => [
           ['URL', 'https://leakix.net'],
-          ['URL', 'https://docs.leakix.net'],
-          ['URL', 'https://github.com/LeakIX/LeakPy']
+          ['URL', 'https://docs.leakix.net']
         ],
         'License' => MSF_LICENSE,
         'Notes' => {
