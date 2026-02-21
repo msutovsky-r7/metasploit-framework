@@ -216,6 +216,15 @@ class MetasploitModule < Msf::Auxiliary
     end
   end
 
+  def print_table(tbl)
+    print_line(tbl.to_s)
+    save_output(tbl)
+  end
+
+  def empty_array?(data)
+    data.nil? || !data.is_a?(Array) || data.empty?
+  end
+
   def display_events(events, label = nil)
     if events.empty?
       print_error('No results found.')
@@ -223,9 +232,7 @@ class MetasploitModule < Msf::Auxiliary
     end
 
     print_status("#{label || 'Total'}: #{events.length} results")
-    tbl = events_table(events)
-    print_line(tbl.to_s)
-    save_output(tbl)
+    print_table(events_table(events))
   end
 
   def collect_host_events(data)
@@ -264,14 +271,13 @@ class MetasploitModule < Msf::Auxiliary
         break
       end
 
-      if data.nil? || !data.is_a?(Array) || data.empty?
+      if empty_array?(data)
         print_warning("No more results at page #{page + 1}")
         break
       end
 
       all_events.concat(data)
       print_good("Got #{data.length} results from page #{page + 1} (total: #{all_events.length})")
-
       if maxresults > 0 && all_events.length >= maxresults
         all_events = apply_maxresults(all_events, maxresults)
         break
@@ -353,7 +359,7 @@ class MetasploitModule < Msf::Auxiliary
     print_status("Fetching subdomains for #{domain}...")
     data = leakix_request("/api/subdomains/#{domain}")
 
-    if data.nil? || !data.is_a?(Array) || data.empty?
+    if empty_array?(data)
       print_error("No subdomains found for #{domain}")
       return
     end
@@ -376,15 +382,14 @@ class MetasploitModule < Msf::Auxiliary
     end
 
     print_status("Found #{seen.length} subdomains")
-    print_line(tbl.to_s)
-    save_output(tbl)
+    print_table(tbl)
   end
 
   def action_plugins
     print_status('Fetching available plugins...')
     data = leakix_request('/api/plugins')
 
-    if data.nil? || !data.is_a?(Array) || data.empty?
+    if empty_array?(data)
       print_error('No plugins found')
       return
     end
@@ -401,8 +406,7 @@ class MetasploitModule < Msf::Auxiliary
     end
 
     print_status("Found #{tbl.rows.length} plugins")
-    print_line(tbl.to_s)
-    save_output(tbl)
+    print_table(tbl)
   end
 
   # ========================================================================
