@@ -23,14 +23,14 @@ class MetasploitModule < Msf::Auxiliary
 
           Actions:
           SEARCH     - Query LeakIX with a search string and scope (leak or service).
-                       Paginated, 20 results per page, max 500 pages (10000 results).
-                       Free accounts have lower page limits.
+          Paginated, 20 results per page, max 500 pages (10000 results).
+          Free accounts have lower page limits.
           HOST       - Retrieve all known services and leaks for a given IP
           DOMAIN     - Retrieve all known services and leaks for a given domain
           SUBDOMAINS - List known subdomains for a given domain
           PLUGINS    - List all available LeakIX scanner plugins
           BULK       - Stream all leak results via the bulk API (Pro only, leak scope only).
-                       Use MAXRESULTS to limit the number of collected events.
+          Use MAXRESULTS to limit the number of collected events.
 
           Query examples:
           +country:"France"
@@ -301,7 +301,7 @@ class MetasploitModule < Msf::Auxiliary
     cli.send_request(req)
 
     head, body_start = read_stream_headers(cli.conn)
-    status = head[/HTTP\/[\d.]+ (\d+)/, 1].to_i
+    status = head[%r{HTTP/[\d.]+ (\d+)}, 1].to_i
 
     case status
     when 401 then fail_with(Failure::BadConfig, '401 Unauthorized - invalid LEAKIX_APIKEY')
@@ -439,7 +439,7 @@ class MetasploitModule < Msf::Auxiliary
 
       data = begin
         sock.get_once(4096, 30)
-      rescue ::Errno::EPIPE, ::EOFError, ::IOError
+      rescue ::Errno::EPIPE, ::IOError
         nil
       end
       break unless data
@@ -467,7 +467,7 @@ class MetasploitModule < Msf::Auxiliary
         line = line_acc.slice!(0, idx + 1).strip
         yield line unless line.empty?
       end
-    rescue ::Errno::EPIPE, ::EOFError, ::IOError
+    rescue ::Errno::EPIPE, ::IOError
       break
     end
 
