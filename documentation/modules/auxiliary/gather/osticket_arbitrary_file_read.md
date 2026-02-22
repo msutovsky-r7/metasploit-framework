@@ -380,23 +380,14 @@ docker run -d -p 8080:80 --name osticket_vuln_server osticket-cve-env
 3. Do: `use auxiliary/gather/osticket_arbitrary_file_read`
 4. Set the `RHOSTS` and `RPORT` options as necessary
 5. Set the `TICKET_NUMBER` with the ticket number gathered from the website.
-
-If a valid project name is known:
-
-6. Set the `PROJECT_NAME` option with the known project name
-7. Do: `run`
-8. If the file exists, the contents will be displayed to the user
-
-If there is no information about existing projects:
-
-6. Set the `PROJECT_NAMES_FILE` option with the absolute path of a wordlist that contains multiple possible values for a valid project name
-7. Do: `run`
-8. If a valid project name is found, the target file contents will be displayed to the user
+6. Set the `USERNAME` and `PASSWORD` from the registered user.
+7. Set the full file name that you want to fetch in the `FILE`.
+8. Do: `run`
 
 ## Options
 
 ### FILE
-The absolute file path of the target file to be retrieved from the osTicket server. By default, this is set to /etc/passwd.
+The absolute file path of the target file to be retrieved from the osTicket server. By default, this is set to `/etc/passwd`.
 
 ### LOGIN_PORTAL
 Specifies which osTicket portal to use for authentication. osTicket maintains separate login interfaces for staff/agents (`scp`) and end-users (`client`). Setting this to auto allows the module to automatically determine the correct portal based on the authentication flow or provided credentials.
