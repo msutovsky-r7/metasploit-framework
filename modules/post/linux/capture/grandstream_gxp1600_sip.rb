@@ -138,7 +138,7 @@ class MetasploitModule < Msf::Post
 
     sip_account_backup_path = "/tmp/#{Rex::Text.sha1("#{client.core.machine_id}_#{sip_account['index']}")}"
 
-    write_file(sip_account_backup_path, enc_data)
+    fail_with(Failure::BadConfig, 'This SIP account config cannot be backed up.') unless write_file(sip_account_backup_path, enc_data)
 
     write_config(sip_account)
   end
