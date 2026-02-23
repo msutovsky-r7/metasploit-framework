@@ -13,7 +13,7 @@ class MetasploitModule < Msf::Post
         info,
         'Name' => 'GrandStream GXP1600 proxy SIP traffic',
         'Description' => %q{
-          This capture module works against Grandstream GXP1600 series VoIP devices and can reconfigure hte device to use an
+          This capture module works against Grandstream GXP1600 series VoIP devices and can reconfigure the device to use an
           arbitrary SIP proxy. You can first leverage the `exploit/linux/http/grandstream_gxp1600_unauth_rce` exploit
           module to get a root session on a target GXP1600 series device before running this post module.
         },
@@ -33,7 +33,7 @@ class MetasploitModule < Msf::Post
           'Stability' => [
             # The phone service will not crash as we are only reconfiguring the phone.
             CRASH_SAFE,
-            # If we don't revert the config changes after we proxy a SIP account, that SIP account cant operate if
+            # If we don't revert the config changes after we proxy a SIP account, that SIP account can't operate if
             # the remote proxy is down.
             SERVICE_RESOURCE_LOSS
           ],
