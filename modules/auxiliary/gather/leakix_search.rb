@@ -510,7 +510,6 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def run
-
     case action.name
     when 'SEARCH' then action_search
     when 'BULK' then action_bulk
