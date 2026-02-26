@@ -488,23 +488,28 @@ class MetasploitModule < Msf::Auxiliary
   # MAIN
   # ========================================================================
 
-  def validate_options!
+  def validate
+    super
+
+    errors = {}
+
     case action.name
     when 'SEARCH', 'BULK'
-      fail_with(Failure::BadConfig, "QUERY is required for #{action.name} action") if datastore['QUERY'].blank?
+      errors['QUERY'] = "QUERY is required for #{action.name} action" if datastore['QUERY'].blank?
     when 'HOST'
-      fail_with(Failure::BadConfig, 'TARGET_IP is required for HOST action') if datastore['TARGET_IP'].blank?
+      errors['TARGET_IP'] = 'TARGET_IP is required for HOST action' if datastore['TARGET_IP'].blank?
     when 'DOMAIN', 'SUBDOMAINS'
-      fail_with(Failure::BadConfig, "TARGET_DOMAIN is required for #{action.name} action") if datastore['TARGET_DOMAIN'].blank?
+      errors['TARGET_DOMAIN'] = "TARGET_DOMAIN is required for #{action.name} action" if datastore['TARGET_DOMAIN'].blank?
     end
 
-    fail_with(Failure::BadConfig, 'BULK action only supports leak scope') if action.name == 'BULK' && datastore['SCOPE'] == 'service'
-    fail_with(Failure::BadConfig, 'MAXPAGE must be between 1 and 500') unless datastore['MAXPAGE'].to_i.between?(1, 500)
-    fail_with(Failure::BadConfig, 'MAXRESULTS must be >= 0') if datastore['MAXRESULTS'].to_i < 0
+    errors['SCOPE'] = 'BULK action only supports leak scope' if action.name == 'BULK' && datastore['SCOPE'] == 'service'
+    errors['MAXPAGE'] = 'MAXPAGE must be between 1 and 500' unless datastore['MAXPAGE'].to_i.between?(1, 500)
+    errors['MAXRESULTS'] = 'MAXRESULTS must be >= 0' if datastore['MAXRESULTS'].to_i < 0
+
+    raise Msf::OptionValidateError, errors unless errors.empty?
   end
 
   def run
-    validate_options!
 
     case action.name
     when 'SEARCH' then action_search
