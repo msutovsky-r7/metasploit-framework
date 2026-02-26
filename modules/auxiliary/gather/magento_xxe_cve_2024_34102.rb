@@ -39,7 +39,6 @@ class MetasploitModule < Msf::Auxiliary
 
     register_options(
       [
-        OptAddressRoutable.new('SRVHOST', [false, 'The local host to listen on and use for incoming connections.']),
         OptString.new('TARGETURI', [ true, 'The base path to the web application', '/']),
         OptString.new('TARGETFILE', [ true, 'The target file to read', '/etc/passwd']),
         OptBool.new('STORE_LOOT', [true, 'Store the target file as loot', false])
