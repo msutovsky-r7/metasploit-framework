@@ -71,8 +71,7 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def backend_url
-    resource = get_resource.end_with?('/') ? get_resource[0, get_resource.length - 1] : get_resource
-    get_uri("#{resource}/catch")
+    "#{get_uri}/catch"
   end
 
   def uxss
