@@ -176,10 +176,8 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def backend_url
-    proto = (datastore['SSL'] ? 'https' : 'http')
-    myhost = (srvhost == '0.0.0.0') ? Rex::Socket.source_address : srvhost
-    port_str = (datastore['SRVPORT'].to_i == 80) ? '' : ":#{datastore['SRVPORT']}"
-    "#{proto}://#{myhost}#{port_str}/#{datastore['URIPATH']}/catch"
+    resource = get_resource.end_with?('/') ? get_resource[0, get_resource.length - 1] : get_resource
+    get_uri("#{resource}/catch")
   end
 
   def run
