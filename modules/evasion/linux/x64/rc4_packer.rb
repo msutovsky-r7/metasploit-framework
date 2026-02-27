@@ -15,21 +15,16 @@ class MetasploitModule < Msf::Evasion
         info,
         'Name' => 'Linux RC4 Encrypted Payload Generator',
         'Description' => %q{
-          This module generates a Linux ELF executable with RC4 encryption
-          and optional sleep-based sandbox evasion.
-
-          The evasion module works on systems with Linux Kernel > 3.17 due to memfd_create support.
-
-          Features:
-          - RC4 encryption with configurable key
-          - Fileless execution via memfd_create
+          This evasion module packs Linux payloads using RC4 encryption
+          and executes them from memory using memfd_create for fileless execution.
+          Linux kernel version support: 3.17+
         },
         'Author' => ['Massimo Bertocchi'],
         'License' => MSF_LICENSE,
         'Platform' => 'linux',
         'Arch' => [ARCH_X64],
         'Targets' => [['Linux x64', {}]],
-        'DefaultTarget' => 0,
+        'DefaultTarget' => 0
       )
     )
 
@@ -50,6 +45,6 @@ class MetasploitModule < Msf::Evasion
     final_elf = Msf::Util::EXE.to_linux_x64_elf(framework, complete_loader)
 
     File.binwrite(datastore['FILENAME'], final_elf)
-    File.chmod(0755, datastore['FILENAME'])
+    File.chmod(0o755, datastore['FILENAME'])
   end
 end
