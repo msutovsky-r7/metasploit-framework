@@ -438,7 +438,7 @@ class MetasploitModule < Msf::Auxiliary
 
   def this_ldap_service
     # use this so we're not reporting the service over and over again
-    @_this_ldap_service ||= report_ldap_service
+    @this_ldap_service ||= report_ldap_service
   end
 
   def report_creds(username, private_data, private_type, jtr_format)

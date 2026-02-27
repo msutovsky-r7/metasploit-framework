@@ -890,7 +890,7 @@ class MetasploitModule < Msf::Auxiliary
                 host: ca_server[:ip_address],
                 port: 445,
                 proto: 'tcp',
-                name: "#{vuln}",
+                name: vuln.to_s,
                 info: info,
                 refs: REFERENCES[vuln],
                 service: service,
