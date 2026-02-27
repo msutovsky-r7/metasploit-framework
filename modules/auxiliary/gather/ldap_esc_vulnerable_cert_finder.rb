@@ -1238,7 +1238,7 @@ class MetasploitModule < Msf::Auxiliary
     }
 
     report_service({
-      name: 'adcs-ca',
+      name: ::Msf::Exploit::Remote::MsIcpr::ADCS_CA_SERVICE_NAME,
       resource: {
         'name' => ca_name
       },
