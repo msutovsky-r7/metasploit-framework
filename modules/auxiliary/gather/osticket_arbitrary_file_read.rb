@@ -52,7 +52,7 @@ class MetasploitModule < Msf::Auxiliary
     )
 
     register_options(
-        [ 
+        [
             OptString.new('TARGETURI', [true, 'Base path to osTicket installation', '/']),
             OptString.new('USERNAME', [true, 'osTicket username or email address']),
             OptString.new('PASSWORD', [true, 'osTicket password']),

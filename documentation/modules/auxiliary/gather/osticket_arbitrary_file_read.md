@@ -18,12 +18,6 @@ This issue is exploitable in default configurations where guests may create tick
 ```bash
 #!/bin/bash
 
-# ==============================================================================
-# osTicket CVE-2026-22200 Environment Setup Script
-# Target Version: osTicket v1.18.1 (Vulnerable)
-# Platform: Ubuntu (Tested on 22.04/24.04)
-# ==============================================================================
-
 set -e  # Exit on error
 
 # Colors for verbose output
@@ -45,36 +39,34 @@ error() {
     exit 1
 }
 
-# --- Configuration Variables ---
 DB_NAME="osticket_db"
 DB_USER="osticket_user"
 DB_PASS="P@ssw0rd123!"  # Change this if needed
 INSTALL_DIR="/var/www/html/osticket"
 OSTICKET_VER="v1.18.1"
-# Release URL for the 'upload' zip which contains all vendor deps
+
 DOWNLOAD_URL="https://github.com/osTicket/osTicket/releases/download/${OSTICKET_VER}/osTicket-${OSTICKET_VER}.zip"
 
-# Check if running as root
+
 if [ "$EUID" -ne 0 ]; then 
     error "Please run as root (sudo ./setup_osticket_cve_env.sh)"
 fi
 
-# 1. Update System & Install Prerequisites
+
 log "Updating system packages..."
 apt-get update -q
 
 log "Installing dependencies (software-properties-common, git, unzip, curl)..."
 apt-get install -y software-properties-common git unzip curl
 
-# 2. Add PHP Repository (to ensure PHP 8.2 is available)
-# osTicket 1.18.x requires PHP 8.1 or 8.2. Ubuntu 24.04 defaults to 8.3 which may have strictness issues.
+
 log "Adding ondrej/php repository to ensure PHP 8.2 availability..."
 add-apt-repository -y ppa:ondrej/php
 apt-get update -q
 
-# 3. Install LAMP Stack
+
 log "Installing Apache, MariaDB, and PHP 8.2 extensions..."
-# Specific extensions required by osTicket
+
 apt-get install -y \
     apache2 \
     mariadb-server \
@@ -93,11 +85,11 @@ apt-get install -y \
 
 success "LAMP stack installed."
 
-# 4. Database Setup
+
 log "Configuring MySQL/MariaDB..."
 service mysql start
 
-# Create Database and User securely
+
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
 mysql -u root -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
 mysql -u root -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
@@ -105,7 +97,7 @@ mysql -u root -e "FLUSH PRIVILEGES;"
 
 success "Database '${DB_NAME}' created with user '${DB_USER}'."
 
-# 5. Download and Install osTicket
+
 log "Downloading osTicket ${OSTICKET_VER}..."
 mkdir -p /tmp/osticket_install
 wget -O /tmp/osticket_install/osticket.zip "${DOWNLOAD_URL}"
@@ -120,10 +112,10 @@ mkdir -p ${INSTALL_DIR}
 
 log "Extracting files..."
 unzip -q /tmp/osticket_install/osticket.zip -d /tmp/osticket_install/
-# The zip contains an 'upload' folder which is the actual web root
+
 cp -r /tmp/osticket_install/upload/* ${INSTALL_DIR}/
 
-# 6. Configure osTicket Settings
+
 log "Preparing configuration file..."
 cd ${INSTALL_DIR}/include
 if [ -f ost-sampleconfig.php ]; then
@@ -132,12 +124,12 @@ else
     error "ost-sampleconfig.php not found! Extraction might have failed."
 fi
 
-# Set permissions for installation (osTicket needs to write to this during setup)
+
 chmod 0666 ost-config.php
 
-# 7. Configure Apache
+
 log "Configuring Apache Virtual Host..."
-# Create a dedicated config to avoid messing with default too much, or just alias it
+
 CONF_FILE="/etc/apache2/sites-available/osticket.conf"
 
 cat > ${CONF_FILE} <<EOF
@@ -156,24 +148,24 @@ cat > ${CONF_FILE} <<EOF
 </VirtualHost>
 EOF
 
-# Enable the site and rewrite module
+
 a2dissite 000-default.conf
 a2ensite osticket.conf
 a2enmod rewrite
 
-# Fix permissions for the web directory
+
 chown -R www-data:www-data ${INSTALL_DIR}
 chmod -R 755 ${INSTALL_DIR}
-# The config file needs to be writable during setup
+
 chmod 0666 ${INSTALL_DIR}/include/ost-config.php
 
 log "Restarting Apache..."
 service apache2 restart
 
-# 8. Cleanup
+
 rm -rf /tmp/osticket_install
 
-# 9. Final Output
+
 IP_ADDR=$(hostname -I | cut -d' ' -f1)
 
 echo "================================================================="
@@ -232,20 +224,16 @@ OsTicket does not ship their official docker so have a monolithic setup is the b
 1. Use the following Dockerfile to setup:
 
 ```Dockerfile
-# Use the official Ubuntu 22.04 base image
 FROM ubuntu:22.04
 
-# Prevent interactive prompts during apt installations
 ENV DEBIAN_FRONTEND=noninteractive
 
-# --- Configuration Variables ---
 ENV DB_NAME="osticket_db" \
     DB_USER="osticket_user" \
     DB_PASS="P@ssw0rd123!" \
     INSTALL_DIR="/var/www/html/osticket" \
     OSTICKET_VER="v1.18.1"
 
-# 1. Update System & Install Prerequisites
 RUN apt-get update -q && apt-get install -y \
     software-properties-common \
     git \
@@ -255,10 +243,8 @@ RUN apt-get update -q && apt-get install -y \
     nano \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Add PHP Repository to ensure PHP 8.2
 RUN add-apt-repository -y ppa:ondrej/php && apt-get update -q
 
-# 3. Install LAMP Stack (Apache, MariaDB, PHP 8.2 + Extensions)
 RUN apt-get install -y \
     apache2 \
     mariadb-server \
@@ -276,7 +262,6 @@ RUN apt-get install -y \
     libapache2-mod-php8.2 \
     && rm -rf /var/lib/apt/lists/*
 
-# 4. Database Setup (Starts MariaDB temporarily during build to create DB/User)
 RUN service mariadb start && \
     sleep 3 && \
     mysql -u root -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};" && \
@@ -284,7 +269,7 @@ RUN service mariadb start && \
     mysql -u root -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';" && \
     mysql -u root -e "FLUSH PRIVILEGES;"
 
-# 5. Download and Install osTicket
+
 RUN mkdir -p /tmp/osticket_install && \
     wget -O /tmp/osticket_install/osticket.zip "https://github.com/osTicket/osTicket/releases/download/${OSTICKET_VER}/osTicket-${OSTICKET_VER}.zip" && \
     rm -rf ${INSTALL_DIR} && \
@@ -292,13 +277,10 @@ RUN mkdir -p /tmp/osticket_install && \
     unzip -q /tmp/osticket_install/osticket.zip -d /tmp/osticket_install/ && \
     cp -r /tmp/osticket_install/upload/* ${INSTALL_DIR}/
 
-# 6. Configure osTicket Settings
 RUN cp ${INSTALL_DIR}/include/ost-sampleconfig.php ${INSTALL_DIR}/include/ost-config.php
 
-# Apply the PHP 8.2 deprecation fix so the setup UI doesn't break
 RUN sed -i "s/error_reporting(E_ALL & ~E_NOTICE);/error_reporting(E_ALL \& ~E_NOTICE \& ~E_DEPRECATED \& ~E_WARNING);/" ${INSTALL_DIR}/bootstrap.php
 
-# 7. Configure Apache Virtual Host
 RUN echo "<VirtualHost *:80>\n\
     ServerAdmin admin@localhost\n\
     DocumentRoot ${INSTALL_DIR}\n\
@@ -311,7 +293,6 @@ RUN echo "<VirtualHost *:80>\n\
     CustomLog \${APACHE_LOG_DIR}/access.log combined\n\
 </VirtualHost>" > /etc/apache2/sites-available/osticket.conf
 
-# Enable site/rewrite and set permissions
 RUN a2dissite 000-default.conf && \
     a2ensite osticket.conf && \
     a2enmod rewrite && \
@@ -319,10 +300,8 @@ RUN a2dissite 000-default.conf && \
     chmod -R 755 ${INSTALL_DIR} && \
     chmod 0666 ${INSTALL_DIR}/include/ost-config.php
 
-# 8. Cleanup
 RUN rm -rf /tmp/osticket_install
 
-# 9. Create an Entrypoint Script to run both MariaDB and Apache
 RUN echo '#!/bin/bash\n\
 # Start MariaDB service\n\
 service mariadb start\n\
@@ -333,10 +312,8 @@ source /etc/apache2/envvars\n\
 exec apache2 -D FOREGROUND\n\
 ' > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 
-# Expose HTTP port
 EXPOSE 80
 
-# Execute the entrypoint
 CMD ["/usr/local/bin/entrypoint.sh"]
 ```
 
@@ -400,34 +377,6 @@ Specifies the upper limit when brute-forcing the internal database ID of a ticke
 
 ### TICKET_NUMBER
 The public-facing, user-visible ticket number (e.g., `978554`) that the module will target to inject the payload and trigger the vulnerability.
-
-### USERNAME
-The username or email address used to authenticate to the osTicket portal.
-
-### PASSWORD
-The password associated with the `USERNAME` to authenticate into the target osTicket instance.
-
-### RHOSTS
-The target IP address, hostname, or CIDR network range of the vulnerable osTicket server.
-
-### RPORT
-The target port where the osTicket HTTP/HTTPS service is running. The default is 80.
-
-### SSL
-If set to true, the module will negotiate SSL/TLS for outgoing connections, which is required if the target osTicket instance is served over HTTPS. The default is false.
-
-### STORE_LOOT
-If set to true, the contents of the successfully extracted file (defined in `FILE`) will be saved directly into the Metasploit database as loot for later analysis. The default is true.
-
-### TARGETURI
-The base URI path where osTicket is installed on the web server. For example, if the application is hosted at `http://target.com/support/`, this should be set to `/support/`. The default is `/`.
-
-### VHOST
-The HTTP virtual host to use for the target. This is necessary if the target server relies on name-based virtual hosting to route traffic to the osTicket application.
-
-### Proxies
-Allows you to route the exploit traffic through a proxy chain. The expected format is type:host:port. Supported proxy types include socks4, socks5, socks5h, and http.
-
 
 ## Scenarios
 

@@ -447,9 +447,8 @@ module Msf
       filters << 'convert.iconv.UTF8.UTF7|'
 
       b64_payload.reverse.each_char do |c|
-        hex_char = c.ord.to_s(16)
-        mapping = CONVERSIONS[hex_char]
-        next unless mapping
+        mapping = CONVERSIONS[c]
+        next if mapping.nil? || mapping.empty?
 
         filters << mapping << '|'
         filters << 'convert.base64-decode|'
