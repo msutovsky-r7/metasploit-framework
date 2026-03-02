@@ -200,7 +200,7 @@ module ModuleValidation
             errors.add :references, "URL reference '#{val}' is not a valid HTTP(s) URI with valid percent encoding"
           end
         rescue URI::InvalidURIError => e
-          errors.add :references, "URL reference '#{val}' is not a valid HTTP(s) URI with valid percent encoding: #{e.message}"
+          errors.add :references, "URL reference '#{val}' is not a valid HTTP(s) URI with valid percent encoding"
         end
       end
     end

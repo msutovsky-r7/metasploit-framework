@@ -343,9 +343,9 @@ RSpec.describe ModuleValidation::Validator do
 
       it 'has errors for invalid URL references' do
         expect(subject.errors.full_messages).to include(
-          "References URL reference 'not a valid url' is not a valid HTTP(s) URI with valid percent encoding: bad URI (is not URI?): \"not a valid url\"",
+          "References URL reference 'not a valid url' is not a valid HTTP(s) URI with valid percent encoding",
           "References URL reference 'ftp://example.com/file.txt' is not a valid HTTP(s) URI with valid percent encoding",
-          "References URL reference 'ht tp://example.com' is not a valid HTTP(s) URI with valid percent encoding: bad URI (is not URI?): \"ht tp://example.com\"",
+          "References URL reference 'ht tp://example.com' is not a valid HTTP(s) URI with valid percent encoding",
           "References URL reference 'example.com/exploit/research' is not a valid HTTP(s) URI with valid percent encoding"
         )
       end
