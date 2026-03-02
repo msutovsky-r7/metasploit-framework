@@ -67,6 +67,10 @@ module Msf::DBManager::Import::Nessus::XML::V2
         )
       end
 
+      mapped_protos = {
+        'rmi-p4' => 'tcp'
+      }
+
       host['ports'].each do |item|
         next if item['port'] == 0
         msf = nil
@@ -74,6 +78,7 @@ module Msf::DBManager::Import::Nessus::XML::V2
         nasl_name = item['nasl_name'].to_s
         port = item['port'].to_s
         proto = item['proto'] ? item['proto'].downcase : "tcp"
+        proto = mapped_protos[proto] if mapped_protos[proto]
         sname = item['svc_name']
         severity = item['severity']
         description = item['description']
@@ -81,6 +86,12 @@ module Msf::DBManager::Import::Nessus::XML::V2
         bid = item['bid']
         xref = item['xref']
         msf = item['msf']
+
+        next if proto.casecmp?('icmp')
+        unless Mdm::Service::PROTOS.include?(proto)
+          elog("Unknown protocol '#{proto}' for #{addr}:#{port} for nessus import, defaulting to tcp")
+          proto = "tcp"
+        end
 
         yield(:port,port) if block
 
