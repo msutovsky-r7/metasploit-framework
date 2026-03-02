@@ -19,7 +19,7 @@ class MetasploitModule < Msf::Auxiliary
         },
         'Author' => 'Jon Hart <jon_hart[at]rapid7.com>',
         'References' => [
-          ['URL', 'ftp://ftp.idsoftware.com/idstuff/quake3/docs/server.txt']
+          ['URL', 'https://ftp.gwdg.de/pub/misc/ftp.idsoftware.com/idstuff/quake3/docs/server.txt']
         ],
         'License' => MSF_LICENSE,
         'Actions' => [
