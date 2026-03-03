@@ -72,6 +72,7 @@ module Msf::DBManager::Import::Nessus::XML::V2
       }
 
       host['ports'].each do |item|
+        # XXX: The value of item['port'] is the string '0' - re-evaluate if this line is required
         next if item['port'] == 0
         msf = nil
         nasl = item['nasl'].to_s
@@ -87,7 +88,6 @@ module Msf::DBManager::Import::Nessus::XML::V2
         xref = item['xref']
         msf = item['msf']
 
-        next if proto.casecmp?('icmp')
         unless Mdm::Service::PROTOS.include?(proto)
           elog("Unknown protocol '#{proto}' for #{addr}:#{port} for nessus import, defaulting to tcp")
           proto = "tcp"
