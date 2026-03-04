@@ -1257,7 +1257,10 @@ class MetasploitModule < Msf::Auxiliary
             }
           },
           parents: {
-            name: 'smb'
+            name: 'smb',
+            parents: {
+              name: 'tcp'
+            }
           }.merge(common)
         }.merge(common)
       }.merge(common)
