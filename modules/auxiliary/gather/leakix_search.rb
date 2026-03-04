@@ -66,12 +66,12 @@ class MetasploitModule < Msf::Auxiliary
 
     register_options([
       OptString.new('LEAKIX_APIKEY', [true, 'The LeakIX API key']),
-      OptString.new('QUERY', [true, 'The LeakIX search query'], conditions: ['ACTION', 'in', %w[SEARCH BULK]]),
+      OptString.new('QUERY', [false, 'The LeakIX search query'], conditions: ['ACTION', 'in', %w[SEARCH BULK]]),
       OptEnum.new('SCOPE', [true, 'Search scope (BULK only supports leak)', 'leak', ['leak', 'service']], conditions: ['ACTION', 'in', %w[SEARCH BULK]]),
       OptInt.new('MAXPAGE', [true, 'Max pages to collect (1-500, 20 results/page)', 1], conditions: %w[ACTION == SEARCH]),
       OptInt.new('MAXRESULTS', [false, 'Stop after collecting this many results (0 = unlimited)', 0], conditions: ['ACTION', 'in', %w[SEARCH BULK]]),
-      OptString.new('TARGET_IP', [true, 'Target IP for HOST action'], conditions: %w[ACTION == HOST]),
-      OptString.new('TARGET_DOMAIN', [true, 'Target domain for DOMAIN/SUBDOMAINS actions'], conditions: ['ACTION', 'in', %w[DOMAIN SUBDOMAINS]]),
+      OptString.new('TARGET_IP', [false, 'Target IP for HOST action'], conditions: %w[ACTION == HOST]),
+      OptString.new('TARGET_DOMAIN', [false, 'Target domain for DOMAIN/SUBDOMAINS actions'], conditions: ['ACTION', 'in', %w[DOMAIN SUBDOMAINS]]),
       OptString.new('OUTFILE', [false, 'Path to the file to store results']),
       OptBool.new('DATABASE', [false, 'Add search results to the database', false])
     ])
@@ -492,6 +492,16 @@ class MetasploitModule < Msf::Auxiliary
     super
 
     errors = {}
+
+    case action.name
+    when 'SEARCH', 'BULK'
+      errors['QUERY'] = "QUERY is required for #{action.name} action" if datastore['QUERY'].blank?
+    when 'HOST'
+      errors['TARGET_IP'] = 'TARGET_IP is required for HOST action' if datastore['TARGET_IP'].blank?
+    when 'DOMAIN', 'SUBDOMAINS'
+      errors['TARGET_DOMAIN'] = "TARGET_DOMAIN is required for #{action.name} action" if datastore['TARGET_DOMAIN'].blank?
+    end
+
     errors['SCOPE'] = 'BULK action only supports leak scope' if action.name == 'BULK' && datastore['SCOPE'] == 'service'
     errors['MAXPAGE'] = 'MAXPAGE must be between 1 and 500' unless datastore['MAXPAGE'].to_i.between?(1, 500)
     errors['MAXRESULTS'] = 'MAXRESULTS must be >= 0' if datastore['MAXRESULTS'].to_i < 0
