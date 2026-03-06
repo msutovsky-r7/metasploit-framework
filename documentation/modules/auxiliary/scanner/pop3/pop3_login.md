@@ -100,6 +100,7 @@ The default wordlists are:
 - The we can configure it
 
 In /etc/dovecot/dovecot.conf uncomment the line `#protocols = pop3 imap lmtp`
+
 In /etc/dovecot/conf.d/10-ssl.conf change the line `ssl = yes` to `ssl = no` (obviously this is bad practice)
 
 - Then we create a new user `sudo useradd -m alice && echo "alice:password123" | sudo chpasswd`
