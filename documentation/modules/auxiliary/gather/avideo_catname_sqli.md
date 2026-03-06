@@ -108,7 +108,7 @@ but may produce false positives on slow networks.
 
 ## Scenarios
 
-### Credential dump against AVideo <= 21.0.0
+### Credential dump against AVideo <= 22.0
 
 ```
 msf > use auxiliary/gather/avideo_catname_sqli
