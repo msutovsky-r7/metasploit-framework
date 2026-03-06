@@ -93,21 +93,23 @@ The default wordlists are:
 
 
 
-- First we need to install an email server, here we will use dovecot:
+First we need to install an email server, here we will use dovecot:
 
-`sudo apt install dovecot-core dovecot-pop3d` version 2.3 will be installed
+- `sudo apt install dovecot-core dovecot-pop3d` version 2.3 will be installed
 
-- The we can configure it
+Then we can configure it
 
-In /etc/dovecot/dovecot.conf uncomment the line `#protocols = pop3 imap lmtp`
+- In /etc/dovecot/dovecot.conf uncomment the line `#protocols = pop3 imap lmtp`
 
-In /etc/dovecot/conf.d/10-ssl.conf change the line `ssl = yes` to `ssl = no` (obviously this is bad practice)
+- In /etc/dovecot/conf.d/10-ssl.conf change the line `ssl = yes` to `ssl = no` (obviously this is bad practice)
 
-- Then we create a new user `sudo useradd -m alice && echo "alice:password123" | sudo chpasswd`
+Then we create a new user
 
-- We can now start the server with `sudo systemctl start dovecot`
+- `sudo useradd -m alice && echo "alice:password123" | sudo chpasswd`
 
-- Now we can go into msfconsole:
+We can now start the server with `sudo systemctl start dovecot`
+
+Now we can go into msfconsole:
 
 ```
 msf > use auxiliary/scanner/pop3/pop3_login
