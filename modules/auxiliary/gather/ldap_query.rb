@@ -69,7 +69,7 @@ class MetasploitModule < Msf::Auxiliary
     ])
 
     register_advanced_options([
-      OptBool.new('LDAP::QuerySacl', [true, 'Query the SACL field from security descriptors (requires privileges)', true])
+      OptBool.new('LDAP::QuerySacl', [true, 'Query the SACL field from security descriptors (requires privileges)', false])
     ])
   end
 
