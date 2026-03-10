@@ -12,7 +12,7 @@ on TCP port 9100.
 
 - **Protocol:** ESC/POS over TCP.
 
-- **CVE:** Submitted for Epson-compatible thermal printers; awaiting assignment.
+- **CVE:** CVE-2026-23767
 
 
 
