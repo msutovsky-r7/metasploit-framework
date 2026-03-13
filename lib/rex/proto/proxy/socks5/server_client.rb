@@ -229,6 +229,11 @@ module Socks5
 
           @server.remove_client(self)
           @closed = true
+
+          unless @client_thread == Thread.current
+            @client_thread.join
+          end
+          @client_thread = nil
         end
       end
     end
