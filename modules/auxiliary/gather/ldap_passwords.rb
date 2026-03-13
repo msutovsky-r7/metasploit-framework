@@ -413,7 +413,7 @@ class MetasploitModule < Msf::Auxiliary
         when :krb_enc_key
           report_vuln(common.merge({
             name: 'Kerberos encryption key found in LDAP',
-            info: "Module #{fullname} found a kerberos encryption key in LDAP.",
+            info: "Module #{fullname} found a Kerberos encryption key in LDAP.",
             refs: [
               SiteReference.new('CWE', '312'), # CWE-312: Cleartext Storage of Sensitive Information
             ]
@@ -421,9 +421,9 @@ class MetasploitModule < Msf::Auxiliary
         when :ntlm_hash
           report_vuln(common.merge({
             name: 'NTLM hash found in LDAP',
-            info: "Module #{fullname} found a NTLM hash in LDAP.",
+            info: "Module #{fullname} found an NTLM hash in LDAP.",
             refs: [
-              SiteReference.new('CWE', '512') # CWE-522: Insufficiently Protected Credentials
+              SiteReference.new('CWE', '522') # CWE-522: Insufficiently Protected Credentials
             ]
           }))
         when :password
