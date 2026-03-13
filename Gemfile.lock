@@ -49,8 +49,6 @@ PATH
       metasploit-payloads (= 2.0.244)
       metasploit_data_models (>= 6.0.15)
       metasploit_payloads-mettle (= 1.0.46)
-      metasploit-payloads (= 2.0.237)
-      metasploit_data_models (>= 6.0.7)
       mqtt
       msgpack (~> 1.6.0)
       mutex_m
