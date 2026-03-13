@@ -11,8 +11,6 @@ require 'rex/post/meterpreter/client'
 require 'rex/socket/x509_certificate'
 
 require 'openssl'
-require 'pry'
-require 'pry-byebug'
 
 module Rex
 module Post
