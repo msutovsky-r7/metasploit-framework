@@ -366,10 +366,14 @@ class MetasploitModule < Msf::Auxiliary
           artifacts.jtr_format = Metasploit::Framework::Hashes.identify_hash(artifacts.private_data)
         end
 
-        if attr.include?('password')
-          artifacts.private_type = :password
-        else
-          artifacts.private_type = :nonreplayable_hash
+        if artifacts.private_type.blank?
+          if artifacts.jtr_format == 'nt'
+            artifacts.private_type = :ntlm_hash
+          elsif artifacts.jtr_format.blank? && attr.include?('password')
+            artifacts.private_type = :password
+          else
+            artifacts.private_type = :nonreplayable_hash
+          end
         end
       end
 
