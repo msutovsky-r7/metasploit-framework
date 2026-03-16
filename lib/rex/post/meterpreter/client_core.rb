@@ -866,7 +866,7 @@ private
       else
         c.include(::Msf::Payload::Linux::X64::Migrate)
       end
-      stub = c.new().generate(opts={"payload":payload,  "payload_length":payload_length})
+      stub = c.new().generate(opts={"payload":payload,  "payload_length":payload_length, "pid": target_process['pid']})
     else
       raise RuntimeError, "Unsupported session #{client.session_type}"
     end
