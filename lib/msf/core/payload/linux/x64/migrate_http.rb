@@ -1,4 +1,6 @@
 # -*- coding: binary -*-
+
+require 'rex/elfparsey'
 module Msf
 
 ###
@@ -7,12 +9,14 @@ module Msf
 #
 ###
 
-module Payload::Linux::X64::Migrate
+module Payload::Linux::X64::MigrateHttp
+  
+  include Msf::Payload::Linux::X64::Migrate
 
 
   def initialize(info={})
     super(update_info(info,
-      'Name'        => 'Linux Migration (x64)',
+      'Name'        => 'Linux HTTP Migration (x64)',
       'Description' => 'Migration stub x64',
       'Author'      => ['OJ Reeves', 'msutovsky-r7'],
       'License'     => MSF_LICENSE,
@@ -24,23 +28,8 @@ module Payload::Linux::X64::Migrate
   #
   # Constructs the migrate stub on the fly
   #
-  def generate(opts={})
-    asm = %^
-      push r11
-      xor rax, rax
-      push 0x39
-      pop rax
-      syscall ; fork()
-      cmp rax, 0
-      jz _exec_child
-_exec_parent:
-      int 3
-_exec_child:
-      pop r11
-      #{generate_migrate(opts)}
-^
-
-    Metasm::Shellcode.assemble(Metasm::X64.new, asm).encode_string
+  def generate_migrate(opts={})
+    %^^
   end
 
 end
