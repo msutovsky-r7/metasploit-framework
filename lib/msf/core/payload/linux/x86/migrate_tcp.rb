@@ -8,8 +8,9 @@ module Msf
 #
 ###
 
-module Payload::Linux::X86::Migrate
+module Payload::Linux::X86::MigrateTcp
 
+  include Msf::Payload::Linux:X86::Migrate
 
   def initialize(info={})
     super(update_info(info,
@@ -25,14 +26,12 @@ module Payload::Linux::X86::Migrate
   #
   # Constructs the migrate stub on the fly
   #
-  def generate(opts={})
-    asm = %Q^
+  def generate_stub(opts={})
+    %Q^
       nop
       nop
       nop
-      #{migrate_stub(opts)}
     ^
-    Metasm::Shellcode.assemble(Metasm::X86.new, asm).encode_string
   end
 
 end
