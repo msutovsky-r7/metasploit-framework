@@ -389,7 +389,7 @@ module Rex
             framework: framework,
             framework_module: framework_module,
             ticket_storage: Msf::Exploit::Remote::Kerberos::Ticket::Storage::WriteOnly.new(framework: framework, framework_module: framework_module),
-            clock_skew: Msf::OptTimedelta.parse(framework_module.datastore['KrbClockSkew'])
+            clock_skew: framework_module.datastore['KrbClockSkew']
           )
 
           kerberos_result = kerberos_authenticator.authenticate
