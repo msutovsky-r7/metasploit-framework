@@ -651,7 +651,6 @@ class ClientCore < Extension
 
     # Build the migration request
     request = Packet.create_request(COMMAND_ID_CORE_MIGRATE)
-
     request.add_tlv(TLV_TYPE_MIGRATE_PID, target_pid)
     request.add_tlv(TLV_TYPE_MIGRATE_PAYLOAD, migrate_payload, false, client.capabilities[:zlib])
     request.add_tlv(TLV_TYPE_MIGRATE_STUB, migrate_stub, false, client.capabilities[:zlib])
@@ -868,6 +867,8 @@ private
           case t[:url]
           when /^tcp/i
             c.include(::Msf::Payload::Linux::X64::MigrateTcp)
+          when /^http/i
+            c.include(::Msf::Payload::Linux::X64::MigrateHttp)
           else
             raise RuntimeError, "Unsupported transport #{t[:url]}"
           end
