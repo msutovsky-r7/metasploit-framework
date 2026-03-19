@@ -38,5 +38,13 @@ module Rex::Proto::Gss
     def mech_type_list
       self[:gssapi][:neg_token_init][:mech_type_list][:mech_type]
     end
+
+    def self.parse(str, ber: false)
+      token_init = super(str, ber: ber)
+      unless token_init.mech_token&.start_with?("NTLMSSP")
+        raise RASN1::ASN1Error "Invalid NTLM blob in SPNEGO NegTokenInit"
+      end
+      token_init
+    end
   end
 end
