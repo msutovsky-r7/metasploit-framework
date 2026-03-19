@@ -51,3 +51,4 @@ msf auxiliary(scanner/http/drupal_views_user_enum) > run
 [*] Scanned 1 of 1 hosts (100% complete)
 [*] Auxiliary module execution completed
 ```
+

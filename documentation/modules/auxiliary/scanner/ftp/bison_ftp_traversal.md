@@ -8,8 +8,7 @@ The vulnerability is tracked as [CVE-2015-7602](https://cve.mitre.org/cgi-bin/cv
 
 ### Setup
 
-1. Download BisonWare BisonFTP Server 3.5 (the installer can be found on exploit-db or
-   archived download sites).
+1. Download BisonWare BisonFTP Server 3.5 from [Exploit-DB (EDB-38341)](https://www.exploit-db.com/exploits/38341).
 2. Install and run it on a Windows host.
 3. Configure the FTP root directory and ensure the service is listening (default port 21).
 4. Set up an anonymous login or create a user account with credentials.
@@ -81,3 +80,4 @@ msf auxiliary(scanner/ftp/bison_ftp_traversal) > run
 [*] Scanned 1 of 1 hosts (100% complete)
 [*] Auxiliary module execution completed
 ```
+

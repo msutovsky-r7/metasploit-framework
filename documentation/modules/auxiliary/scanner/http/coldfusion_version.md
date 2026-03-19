@@ -25,9 +25,6 @@ Alternatively, older ColdFusion trial installers can often be found on the
 
 ## Options
 
-This module uses the standard `RHOSTS`, `RPORT`, `SSL`, and `THREADS` scanner options.
-There are no additional module-specific options.
-
 ## Scenarios
 
 ### ColdFusion 9 on Windows Server 2008
@@ -57,3 +54,4 @@ msf auxiliary(scanner/http/coldfusion_version) > run
 [*] Scanned 1 of 1 hosts (100% complete)
 [*] Auxiliary module execution completed
 ```
+

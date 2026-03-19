@@ -52,3 +52,4 @@ msf auxiliary(scanner/http/apache_activemq_traversal) > run
 [*] Scanned 1 of 1 hosts (100% complete)
 [*] Auxiliary module execution completed
 ```
+
