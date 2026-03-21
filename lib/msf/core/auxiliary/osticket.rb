@@ -1,6 +1,7 @@
 # -*- coding: binary -*-
 
 require 'zlib'
+require 'nokogiri'
 
 ##
 # Shared helpers for osTicket auxiliary modules 
@@ -911,22 +912,633 @@ module Msf
       vprint_error("Failed to store credential: #{e}")
     end
 
+    # Extracts the first usable topicId from the static open.php HTML.
+    #
+    # NOTE: osTicket loads the subject/message form fields dynamically via AJAX
+    # (ajax.php/form/help-topic/{id}) when a topic is chosen — they are NOT in
+    # the initial open.php response. Call fetch_topic_form_fields separately.
+    #
+    # @param html [String] HTML of open.php
+    # @return [String] topicId value (first non-empty option, defaults to '1')
+    def detect_open_form_fields(html)
+      doc = Nokogiri::HTML(html)
+
+      topic_select = doc.at('select[@name="topicId"]') || doc.at('select[@id="topicId"]')
+      # Skip the blank placeholder option ("-- Select a Help Topic --")
+      topic_id = topic_select&.search('option')
+                              &.find { |o| !o['value'].to_s.empty? }
+                              &.[]('value') || '1'
+
+      vprint_status("detect_open_form_fields: topicId=#{topic_id}")
+      topic_id
+    end
+
+    # Fetches the dynamic ticket-creation form fields for a given help topic.
+    #
+    # When a user picks a help topic on open.php, the browser fires an AJAX
+    # request to ajax.php/form/help-topic/{id} which returns JSON containing
+    # an "html" key with the rendered form fields (subject input + message
+    # textarea, each named with a dynamic hex hash). This method replicates
+    # that browser-side call so we can extract the actual field names.
+    #
+    # @param base_uri [String] base path to osTicket
+    # @param topic_id [String] help topic ID (from detect_open_form_fields)
+    # @param cookies  [String] session cookies
+    # @return [Array] [subject_field_name, message_field_name] or [nil, nil]
+    def fetch_topic_form_fields(base_uri, topic_id, cookies)
+      ajax_uri = normalize_uri(base_uri, 'ajax.php', 'form', 'help-topic', topic_id.to_s)
+      vprint_status("fetch_topic_form_fields: GET #{ajax_uri}")
+
+      proto   = datastore['SSL'] ? 'https' : 'http'
+      referer = "#{proto}://#{rhost}:#{rport}#{normalize_uri(base_uri, 'open.php')}"
+
+      res = send_request_cgi(
+        'method'  => 'GET',
+        'uri'     => ajax_uri,
+        'cookie'  => cookies,
+        'headers' => {
+          'X-Requested-With' => 'XMLHttpRequest',
+          'Referer'          => referer
+        }
+      )
+      unless res&.code == 200
+        vprint_error("fetch_topic_form_fields: AJAX request failed (code=#{res&.code})")
+        return [nil, nil]
+      end
+
+      begin
+        data = JSON.parse(res.body)
+      rescue JSON::ParserError => e
+        vprint_error("fetch_topic_form_fields: JSON parse error: #{e}")
+        return [nil, nil]
+      end
+
+      form_html = data['html'].to_s
+      if form_html.empty?
+        vprint_error('fetch_topic_form_fields: Empty html in AJAX response')
+        return [nil, nil]
+      end
+
+      doc = Nokogiri::HTML(form_html)
+
+      subject_field = nil
+      doc.search('input[@type="text"]').each do |input|
+        name = input['name'].to_s
+        if name.match?(/\A[a-f0-9]{10,}\z/)
+          subject_field = name
+          break
+        end
+      end
+
+      message_field = nil
+      doc.search('textarea').each do |ta|
+        name = ta['name'].to_s
+        if name.match?(/\A[a-f0-9]{10,}\z/)
+          message_field = name
+          break
+        end
+      end
+
+      vprint_status("fetch_topic_form_fields: subject=#{subject_field.inspect}, message=#{message_field.inspect}")
+      [subject_field, message_field]
+    end
+
+    # Fetches the visible ticket number (e.g. 284220 from #284220) from a client ticket page.
+    #
+    # @param base_uri  [String] base path to osTicket
+    # @param ticket_id [String] internal ticket ID
+    # @param cookies   [String] session cookies
+    # @return [String, nil] ticket number or nil
+    def fetch_ticket_number(base_uri, ticket_id, cookies)
+      tickets_uri = normalize_uri(base_uri, 'tickets.php')
+      vprint_status("fetch_ticket_number: GET #{tickets_uri}?id=#{ticket_id}")
+      res = send_request_cgi(
+        'method'   => 'GET',
+        'uri'      => tickets_uri,
+        'cookie'   => cookies,
+        'vars_get' => { 'id' => ticket_id }
+      )
+      unless res&.code == 200
+        vprint_warning("fetch_ticket_number: Could not load ticket page (code=#{res&.code})")
+        return nil
+      end
+
+      match = res.body.match(/<small>#(\d+)<\/small>/)
+      if match
+        vprint_good("fetch_ticket_number: Ticket number=##{match[1]}")
+        return match[1]
+      end
+
+      vprint_warning('fetch_ticket_number: Could not parse ticket number from page')
+      nil
+    end
+
+    # Creates a new ticket via the client portal (open.php).
+    # Returns the internal ticket ID and visible ticket number on success.
+    #
+    # @param base_uri [String] base path to osTicket
+    # @param cookies  [String] session cookies (client portal)
+    # @param subject  [String] ticket subject line
+    # @param message  [String] ticket message body
+    # @return [Array] [ticket_id, ticket_number] or [nil, nil] on failure
+    def create_ticket(base_uri, cookies, subject, message)
+      open_uri = normalize_uri(base_uri, 'open.php')
+      vprint_status("create_ticket: GET #{open_uri}")
+
+      res = send_request_cgi('method' => 'GET', 'uri' => open_uri, 'cookie' => cookies)
+      unless res&.code == 200
+        vprint_error("create_ticket: GET open.php failed (code=#{res&.code})")
+        return [nil, nil]
+      end
+
+      csrf = extract_csrf_token(res.body)
+      # Fallback: meta csrf_token tag used on some osTicket builds
+      csrf ||= res.body.match(/<meta\s+name="csrf_token"\s+content="([^"]+)"/i)&.[](1)
+      unless csrf
+        vprint_error('create_ticket: No CSRF token found on open.php')
+        return [nil, nil]
+      end
+
+      # Grab updated session cookies from the open.php response before any AJAX call
+      session_cookies = res.get_cookies
+      session_cookies = cookies if session_cookies.empty?
+
+      # Static HTML only has the topicId select; subject/message fields are
+      # injected via ajax.php/form/help-topic/{id} when a topic is chosen.
+      topic_id = detect_open_form_fields(res.body)
+      subject_field, message_field = fetch_topic_form_fields(base_uri, topic_id, session_cookies)
+      unless subject_field && message_field
+        vprint_error('create_ticket: Could not detect form field names from topic AJAX response')
+        return [nil, nil]
+      end
+
+      vprint_status("create_ticket: POST #{open_uri} (topicId=#{topic_id})")
+      res = send_request_cgi(
+        'method'    => 'POST',
+        'uri'       => open_uri,
+        'cookie'    => session_cookies,
+        'vars_post' => {
+          '__CSRFToken__' => csrf,
+          'a'             => 'open',
+          'topicId'       => topic_id,
+          subject_field   => subject,
+          message_field   => message,
+          'draft_id'      => ''
+        }
+      )
+      unless res
+        vprint_error('create_ticket: No response from POST open.php (nil)')
+        return [nil, nil]
+      end
+      vprint_status("create_ticket: POST response code=#{res.code}")
+
+      new_cookies = res.get_cookies
+      new_cookies = session_cookies if new_cookies.empty?
+
+      if res.code == 302
+        location = res.headers['Location'].to_s
+        ticket_id = location.match(/tickets\.php\?id=(\d+)/i)&.[](1)
+        unless ticket_id
+          vprint_error("create_ticket: Cannot parse ticket ID from Location header: #{location}")
+          return [nil, nil]
+        end
+        vprint_good("create_ticket: Ticket created, internal ID=#{ticket_id}")
+        ticket_number = fetch_ticket_number(base_uri, ticket_id, new_cookies)
+        return [ticket_id, ticket_number]
+      end
+
+      # Some installs return 200 with success notice and a link in the body
+      if res.code == 200 && res.body.include?('ticket request created')
+        id_match = res.body.match(/tickets\.php\?id=(\d+)/)
+        if id_match
+          ticket_id = id_match[1]
+          ticket_number = fetch_ticket_number(base_uri, ticket_id, new_cookies)
+          return [ticket_id, ticket_number]
+        end
+      end
+
+      vprint_error("create_ticket: Unexpected response (code=#{res.code})")
+      [nil, nil]
+    end
+
+    # -------------------------------------------------------------------------
+    # SCP portal — ticket creation helpers
+    # -------------------------------------------------------------------------
+
+    # Fetches static form fields from the SCP new-ticket page.
+    #
+    # GET {prefix}/tickets.php?a=open → extracts CSRF token and the first
+    # non-empty option values for topicId, deptId, and slaId selects.
+    #
+    # @param base_uri [String] base path to osTicket
+    # @param prefix   [String] portal prefix ('/scp')
+    # @param cookies  [String] session cookies
+    # @return [Hash, nil] {csrf:, topic_id:, dept_id:, sla_id:, session_cookies:} or nil
+    def fetch_open_form_fields_scp(base_uri, prefix, cookies)
+      open_uri = normalize_uri(base_uri, prefix, 'tickets.php')
+      vprint_status("fetch_open_form_fields_scp: GET #{open_uri}?a=open")
+
+      res = send_request_cgi(
+        'method'   => 'GET',
+        'uri'      => open_uri,
+        'cookie'   => cookies,
+        'vars_get' => { 'a' => 'open' }
+      )
+      unless res&.code == 200
+        vprint_error("fetch_open_form_fields_scp: failed (code=#{res&.code})")
+        return nil
+      end
+
+      doc = Nokogiri::HTML(res.body)
+
+      csrf = doc.at('input[@name="__CSRFToken__"]')&.[]('value') ||
+             doc.at('meta[@name="csrf_token"]')&.[]('content')
+      unless csrf
+        vprint_error('fetch_open_form_fields_scp: No CSRF token found')
+        return nil
+      end
+
+      first_option = ->(name) {
+        doc.at("select[@name=\"#{name}\"]")
+           &.search('option')
+           &.find { |o| !o['value'].to_s.strip.empty? }
+           &.[]('value')
+      }
+
+      topic_id = first_option.call('topicId') || '1'
+      dept_id  = first_option.call('deptId')  || '0'
+      sla_id   = first_option.call('slaId')   || '0'
+
+      vprint_status("fetch_open_form_fields_scp: csrf=#{csrf[0, 8]}... topicId=#{topic_id} deptId=#{dept_id} slaId=#{sla_id}")
+      {
+        csrf:           csrf,
+        topic_id:       topic_id,
+        dept_id:        dept_id,
+        sla_id:         sla_id,
+        session_cookies: res.get_cookies.empty? ? cookies : res.get_cookies
+      }
+    end
+
+    # Fetches dynamic subject/message field names for the SCP ticket form.
+    #
+    # Identical logic to fetch_topic_form_fields but sets the Referer to the
+    # SCP new-ticket page (tickets.php?a=open) instead of open.php, which is
+    # required to pass osTicket's AJAX Referer validation.
+    #
+    # @param base_uri [String] base path to osTicket
+    # @param prefix   [String] portal prefix ('/scp')
+    # @param topic_id [String] help topic ID
+    # @param cookies  [String] session cookies
+    # @return [Array] [subject_field_name, message_field_name] or [nil, nil]
+    def fetch_topic_form_fields_scp(base_uri, prefix, topic_id, cookies)
+      ajax_uri = normalize_uri(base_uri, prefix, 'ajax.php', 'form', 'help-topic', topic_id.to_s)
+      vprint_status("fetch_topic_form_fields_scp: GET #{ajax_uri}")
+
+      proto   = datastore['SSL'] ? 'https' : 'http'
+      referer = "#{proto}://#{rhost}:#{rport}#{normalize_uri(base_uri, prefix, 'tickets.php')}?a=open"
+
+      res = send_request_cgi(
+        'method'  => 'GET',
+        'uri'     => ajax_uri,
+        'cookie'  => cookies,
+        'headers' => {
+          'X-Requested-With' => 'XMLHttpRequest',
+          'Referer'          => referer
+        }
+      )
+      unless res&.code == 200
+        vprint_error("fetch_topic_form_fields_scp: AJAX failed (code=#{res&.code})")
+        return [nil, nil]
+      end
+
+      begin
+        data = JSON.parse(res.body)
+      rescue JSON::ParserError => e
+        vprint_error("fetch_topic_form_fields_scp: JSON parse error: #{e}")
+        return [nil, nil]
+      end
+
+      form_html = data['html'].to_s
+      if form_html.empty?
+        vprint_error('fetch_topic_form_fields_scp: Empty html in AJAX response')
+        return [nil, nil]
+      end
+
+      doc = Nokogiri::HTML(form_html)
+
+      subject_field = doc.search('input[@type="text"]')
+                         .map { |i| i['name'].to_s }
+                         .find { |n| n.match?(/\A[a-f0-9]{10,}\z/) }
+
+      message_field = doc.search('textarea')
+                         .map { |t| t['name'].to_s }
+                         .find { |n| n.match?(/\A[a-f0-9]{10,}\z/) }
+
+      vprint_status("fetch_topic_form_fields_scp: subject=#{subject_field.inspect} message=#{message_field.inspect}")
+      [subject_field, message_field]
+    end
+
+    # Looks up an existing SCP user by email via the staff typeahead endpoint.
+    #
+    # @param base_uri [String] base path to osTicket
+    # @param prefix   [String] portal prefix ('/scp')
+    # @param cookies  [String] session cookies
+    # @param email    [String] email address to search
+    # @return [String, nil] internal user ID or nil if not found
+    def lookup_user_id_scp(base_uri, prefix, cookies, email)
+      ajax_uri = normalize_uri(base_uri, prefix, 'ajax.php', 'users', 'local')
+      vprint_status("lookup_user_id_scp: GET #{ajax_uri}?q=#{email}")
+
+      proto   = datastore['SSL'] ? 'https' : 'http'
+      referer = "#{proto}://#{rhost}:#{rport}#{normalize_uri(base_uri, prefix, 'tickets.php')}?a=open"
+
+      res = send_request_cgi(
+        'method'   => 'GET',
+        'uri'      => ajax_uri,
+        'cookie'   => cookies,
+        'vars_get' => { 'q' => email },
+        'headers'  => {
+          'X-Requested-With' => 'XMLHttpRequest',
+          'Referer'          => referer
+        }
+      )
+      unless res&.code == 200
+        vprint_error("lookup_user_id_scp: request failed (code=#{res&.code})")
+        return nil
+      end
+
+      begin
+        users = JSON.parse(res.body)
+      rescue JSON::ParserError => e
+        vprint_error("lookup_user_id_scp: JSON parse error: #{e}")
+        return nil
+      end
+
+      return nil unless users.is_a?(Array) && !users.empty?
+
+      user_id = users.first['id'].to_s
+      vprint_good("lookup_user_id_scp: found user id=#{user_id}")
+      user_id
+    end
+
+    # Fetches the dynamic field names from the SCP user creation form.
+    #
+    # GET {prefix}/ajax.php/users/lookup/form returns an HTML fragment with
+    # hex-hash field names for email (type="email") and full name (type="text").
+    #
+    # @param base_uri [String] base path to osTicket
+    # @param prefix   [String] portal prefix ('/scp')
+    # @param cookies  [String] session cookies
+    # @return [Array] [email_field_name, fullname_field_name] or [nil, nil]
+    def fetch_user_form_fields_scp(base_uri, prefix, cookies)
+      ajax_uri = normalize_uri(base_uri, prefix, 'ajax.php', 'users', 'lookup', 'form')
+      vprint_status("fetch_user_form_fields_scp: GET #{ajax_uri}")
+
+      proto   = datastore['SSL'] ? 'https' : 'http'
+      referer = "#{proto}://#{rhost}:#{rport}#{normalize_uri(base_uri, prefix, 'tickets.php')}?a=open"
+
+      res = send_request_cgi(
+        'method'  => 'GET',
+        'uri'     => ajax_uri,
+        'cookie'  => cookies,
+        'headers' => {
+          'X-Requested-With' => 'XMLHttpRequest',
+          'Referer'          => referer
+        }
+      )
+      unless res&.code == 200
+        vprint_error("fetch_user_form_fields_scp: failed (code=#{res&.code})")
+        return [nil, nil]
+      end
+
+      doc = Nokogiri::HTML(res.body)
+
+      email_field = doc.search('input[@type="email"]')
+                       .map { |i| i['name'].to_s }
+                       .find { |n| n.match?(/\A[a-f0-9]{10,}\z/) }
+
+      name_field = doc.search('input[@type="text"]')
+                      .map { |i| i['name'].to_s }
+                      .find { |n| n.match?(/\A[a-f0-9]{10,}\z/) }
+
+      vprint_status("fetch_user_form_fields_scp: email_field=#{email_field.inspect} name_field=#{name_field.inspect}")
+      [email_field, name_field]
+    end
+
+    # Ensures a ticket owner user exists in osTicket via the SCP portal.
+    #
+    # Looks up the user by email first. If not found, fetches the user creation
+    # form field names and POSTs to create the user, then looks up again to
+    # retrieve the internal ID.
+    #
+    # NOTE: The email and fullname values come from SCP_TICKET_EMAIL /
+    # SCP_TICKET_NAME datastore options — they are NOT the attacker's login
+    # credentials and are only used here to assign ownership of the created
+    # ticket.
+    #
+    # @param base_uri [String] base path to osTicket
+    # @param prefix   [String] portal prefix ('/scp')
+    # @param cookies  [String] session cookies
+    # @param csrf     [String] CSRF token from the SCP ticket form
+    # @param email    [String] ticket owner email (SCP_TICKET_EMAIL)
+    # @param fullname [String] ticket owner full name (SCP_TICKET_NAME)
+    # @return [String, nil] internal user ID or nil on failure
+    def ensure_user_scp(base_uri, prefix, cookies, csrf, email, fullname)
+      user_id = lookup_user_id_scp(base_uri, prefix, cookies, email)
+      return user_id if user_id
+
+      vprint_status("ensure_user_scp: user not found, attempting to create (#{email})")
+
+      email_field, name_field = fetch_user_form_fields_scp(base_uri, prefix, cookies)
+      unless email_field && name_field
+        vprint_error('ensure_user_scp: Could not extract user form field names')
+        return nil
+      end
+
+      ajax_uri = normalize_uri(base_uri, prefix, 'ajax.php', 'users', 'lookup', 'form')
+      proto   = datastore['SSL'] ? 'https' : 'http'
+      referer = "#{proto}://#{rhost}:#{rport}#{normalize_uri(base_uri, prefix, 'tickets.php')}?a=open"
+
+      send_request_cgi(
+        'method'    => 'POST',
+        'uri'       => ajax_uri,
+        'cookie'    => cookies,
+        'vars_post' => {
+          email_field => email,
+          name_field  => fullname,
+          'undefined' => 'Add User'
+        },
+        'headers' => {
+          'X-Requested-With' => 'XMLHttpRequest',
+          'X-CSRFToken'      => csrf,
+          'Referer'          => referer
+        }
+      )
+
+      user_id = lookup_user_id_scp(base_uri, prefix, cookies, email)
+      vprint_status("ensure_user_scp: post-create lookup id=#{user_id.inspect}")
+      user_id
+    end
+
+    # Fetches the visible ticket number from the SCP ticket page.
+    #
+    # The SCP portal renders the ticket number as <title>Ticket #NNNNNN</title>,
+    # unlike the client portal which uses <small>#NNNNNN</small>.
+    #
+    # @param base_uri  [String] base path to osTicket
+    # @param prefix    [String] portal prefix ('/scp')
+    # @param ticket_id [String] internal ticket ID
+    # @param cookies   [String] session cookies
+    # @return [String, nil] ticket number or nil
+    def fetch_ticket_number_scp(base_uri, prefix, ticket_id, cookies)
+      tickets_uri = normalize_uri(base_uri, prefix, 'tickets.php')
+      vprint_status("fetch_ticket_number_scp: GET #{tickets_uri}?id=#{ticket_id}")
+
+      res = send_request_cgi(
+        'method'   => 'GET',
+        'uri'      => tickets_uri,
+        'cookie'   => cookies,
+        'vars_get' => { 'id' => ticket_id }
+      )
+      unless res&.code == 200
+        vprint_warning("fetch_ticket_number_scp: Could not load ticket page (code=#{res&.code})")
+        return nil
+      end
+
+      match = res.body.match(/<title>Ticket #(\d+)<\/title>/i)
+      if match
+        vprint_good("fetch_ticket_number_scp: Ticket number=##{match[1]}")
+        return match[1]
+      end
+
+      vprint_warning('fetch_ticket_number_scp: Could not parse ticket number from page')
+      nil
+    end
+
+    # Creates a new ticket via the SCP (staff) portal.
+    #
+    # The ticket is owned by the user identified by SCP_TICKET_EMAIL /
+    # SCP_TICKET_NAME options, which default to user@msf.com / MSF User.
+    # These options are ONLY consulted when ticket creation is triggered
+    # through a valid SCP portal login.
+    #
+    # Flow:
+    #   1. fetch_open_form_fields_scp   — CSRF, topicId, deptId, slaId
+    #   2. fetch_topic_form_fields_scp  — subject/message hex-hash field names
+    #   3. ensure_user_scp              — lookup or create ticket owner, get user_id
+    #   4. POST tickets.php?a=open      — create ticket, follow 302 for ticket_id
+    #   5. fetch_ticket_number_scp      — resolve visible ticket number
+    #
+    # @param base_uri [String] base path to osTicket
+    # @param prefix   [String] portal prefix ('/scp')
+    # @param cookies  [String] session cookies
+    # @param subject  [String] ticket subject
+    # @param message  [String] ticket message body
+    # @return [Array] [ticket_id, ticket_number] or [nil, nil] on failure
+    def create_ticket_scp(base_uri, prefix, cookies, subject, message)
+      fields = fetch_open_form_fields_scp(base_uri, prefix, cookies)
+      return [nil, nil] unless fields
+
+      session_cookies = fields[:session_cookies]
+
+      subject_field, message_field = fetch_topic_form_fields_scp(
+        base_uri, prefix, fields[:topic_id], session_cookies
+      )
+      unless subject_field && message_field
+        vprint_error('create_ticket_scp: Could not detect subject/message field names')
+        return [nil, nil]
+      end
+
+      ticket_email    = datastore['SCP_TICKET_EMAIL'].to_s
+      ticket_fullname = datastore['SCP_TICKET_NAME'].to_s
+
+      user_id = ensure_user_scp(
+        base_uri, prefix, session_cookies, fields[:csrf],
+        ticket_email, ticket_fullname
+      )
+      unless user_id
+        vprint_error('create_ticket_scp: Could not resolve ticket owner user ID')
+        return [nil, nil]
+      end
+
+      open_uri = normalize_uri(base_uri, prefix, 'tickets.php')
+      vprint_status("create_ticket_scp: POST #{open_uri}?a=open (user_id=#{user_id})")
+
+      res = send_request_cgi(
+        'method'    => 'POST',
+        'uri'       => open_uri,
+        'cookie'    => session_cookies,
+        'vars_post' => {
+          '__CSRFToken__' => fields[:csrf],
+          'do'            => 'create',
+          'a'             => 'open',
+          'email'         => ticket_email,
+          'name'          => user_id,
+          'reply-to'      => 'all',
+          'source'        => 'Web',
+          'topicId'       => fields[:topic_id],
+          'deptId'        => fields[:dept_id],
+          'slaId'         => fields[:sla_id],
+          'duedate'       => '',
+          'assignId'      => '0',
+          subject_field   => subject,
+          message_field   => message,
+          'cannedResp'    => '0',
+          'append'        => '1',
+          'response'      => '',
+          'statusId'      => '1',
+          'signature'     => 'none',
+          'note'          => '',
+          'draft_id'      => ''
+        }
+      )
+      unless res
+        vprint_error('create_ticket_scp: No response from POST (nil)')
+        return [nil, nil]
+      end
+      vprint_status("create_ticket_scp: POST response code=#{res.code}")
+
+      unless res.code == 302
+        vprint_error("create_ticket_scp: Expected 302 redirect, got #{res.code}")
+        return [nil, nil]
+      end
+
+      location  = res.headers['Location'].to_s
+      ticket_id = location.match(/tickets\.php\?id=(\d+)/i)&.[](1)
+      unless ticket_id
+        vprint_error("create_ticket_scp: Cannot parse ticket ID from Location: #{location}")
+        return [nil, nil]
+      end
+
+      new_cookies = res.get_cookies.empty? ? session_cookies : res.get_cookies
+      vprint_good("create_ticket_scp: Ticket created, internal ID=#{ticket_id}")
+
+      ticket_number = fetch_ticket_number_scp(base_uri, prefix, ticket_id, new_cookies)
+      [ticket_id, ticket_number]
+    end
+
     # Detects the reply textarea field name from the ticket page HTML.
+    #
+    # Uses Nokogiri DOM parsing for reliable attribute extraction.
+    # osTicket sets id="response" (SCP) or id="message" (client) on the reply
+    # textarea and gives it a dynamic hex-hash name attribute.
     #
     # @param html   [String] ticket page HTML
     # @param prefix [String] portal prefix ('/scp' or '')
     # @return [String] textarea field name
     def detect_reply_textarea(html, prefix)
-      [
-        /name="([^"]+)"[^>]*id="response"/i,
-        /id="response"[^>]*name="([^"]+)"/i,
-        /name="([^"]+)"[^>]*id="message"/i,
-        /id="message"[^>]*name="([^"]+)"/i,
-        /name="(response)"/
-      ].each do |pattern|
-        match = html.match(pattern)
-        return match[1] if match
+      doc = Nokogiri::HTML(html)
+
+      # Try the well-known ids first
+      ta = doc.at('textarea[@id="response"]') || doc.at('textarea[@id="message"]')
+      return ta['name'] if ta && !ta['name'].to_s.empty?
+
+      # Fallback: any textarea with a hex-hash name (osTicket dynamic field naming)
+      doc.search('textarea').each do |t|
+        name = t['name'].to_s
+        return name if name.match?(/\A[a-f0-9]{10,}\z/)
       end
+
       prefix == '/scp' ? 'response' : 'message'
     end
 

