@@ -72,15 +72,15 @@ class Connection
       msg = Message.read(@conn)
 
       case msg
-      when AuthentificationClearTextPassword
+      when AuthenticationClearTextPassword
         raise ArgumentError, "no password specified" if password.nil?
         raise AuthenticationMethodMismatch, "Server expected clear text password auth" if md5_hash_match
         write_message(PasswordMessage.new(password))
-      when AuthentificationCryptPassword
+      when AuthenticationCryptPassword
         raise ArgumentError, "no password specified" if password.nil?
         raise AuthenticationMethodMismatch, "Server expected crypt password auth" if md5_hash_match
         write_message(PasswordMessage.new(password.crypt(msg.salt)))
-      when AuthentificationMD5Password
+      when AuthenticationMD5Password
         raise ArgumentError, "no password specified" if password.nil?
         require 'digest/md5'
 
@@ -99,10 +99,10 @@ class Connection
       when UnknownAuthType
         raise "unknown auth type '#{msg.auth_type}' with buffer content:\n#{Rex::Text.to_hex_dump(msg.buffer.content)}"
 
-      when AuthentificationKerberosV4, AuthentificationKerberosV5, AuthentificationSCMCredential
+      when AuthenticationKerberosV4, AuthenticationKerberosV5, AuthenticationSCMCredential
         raise "unsupported authentication"
 
-      when AuthentificationOk
+      when AuthenticationOk
       when ErrorResponse
         handle_server_error_message(msg)
       when NoticeResponse

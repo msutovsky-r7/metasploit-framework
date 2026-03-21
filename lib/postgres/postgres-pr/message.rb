@@ -166,23 +166,23 @@ class UnknownAuthType < Authentication
   end
 end
 
-class AuthentificationOk < Authentication
+class AuthenticationOk < Authentication
   register_auth_type 0
 end
 
-class AuthentificationKerberosV4 < Authentication
+class AuthenticationKerberosV4 < Authentication
   register_auth_type 1
 end
 
-class AuthentificationKerberosV5 < Authentication
+class AuthenticationKerberosV5 < Authentication
   register_auth_type 2
 end
 
-class AuthentificationClearTextPassword < Authentication
+class AuthenticationClearTextPassword < Authentication
   register_auth_type 3
 end
 
-module SaltedAuthentificationMixin
+module SaltedAuthenticationMixin
   attr_accessor :salt
 
   def initialize(salt)
@@ -205,20 +205,20 @@ module SaltedAuthentificationMixin
   end
 end
 
-class AuthentificationCryptPassword < Authentication
+class AuthenticationCryptPassword < Authentication
   register_auth_type 4
-  include SaltedAuthentificationMixin
+  include SaltedAuthenticationMixin
   def salt_size; 2 end
 end
 
 
-class AuthentificationMD5Password < Authentication
+class AuthenticationMD5Password < Authentication
   register_auth_type 5
-  include SaltedAuthentificationMixin
+  include SaltedAuthenticationMixin
   def salt_size; 4 end
 end
 
-class AuthentificationSCMCredential < Authentication
+class AuthenticationSCMCredential < Authentication
   register_auth_type 6
 end
 
