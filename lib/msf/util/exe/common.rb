@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 module Msf::Util::EXE::Common
   require 'rex'
   require 'rex/peparsey'
