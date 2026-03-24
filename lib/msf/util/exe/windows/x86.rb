@@ -284,11 +284,11 @@ module Msf::Util::EXE::Windows::X86
 
       pe[136, 4] = [rand(0x100000000)].pack('V')
 
-      ci = pe.index("\x31\xc9" * 160)
+      ci = pe.index("\x31\xc9".b * 160)
       unless ci
         raise RuntimeError, "Invalid Win32 PE OLD EXE template: missing first \"\\x31\\xc9\""
       end
-      cd = pe.index("\x31\xc9" * 160, ci + 320)
+      cd = pe.index("\x31\xc9".b * 160, ci + 320)
       unless cd
         raise RuntimeError, "Invalid Win32 PE OLD EXE template: missing second \"\\x31\\xc9\""
       end
