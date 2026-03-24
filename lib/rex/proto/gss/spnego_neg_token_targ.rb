@@ -36,13 +36,5 @@ module Rex::Proto::Gss
     def mech_list_mic
       self[:mech_list_mic].value
     end
-
-    def self.parse(str, ber: false)
-      token_targ = super(str, ber: ber)
-      unless token_targ.response_token&.start_with?("NTLMSSP")
-        raise RASN1::ASN1Error "Invalid NTLM blob in SPNEGO NegTokenTarg"
-      end
-      token_targ
-    end
   end
 end
