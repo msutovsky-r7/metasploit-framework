@@ -38,10 +38,37 @@ Metasploit Framework is an open-source penetration testing and exploitation fram
 - When possible don't set a default payload (`DefaultOptions` with `'PAYLOAD'`) in modules — let the framework choose the most appropriate payload automatically
 - New modules require an associated markdown file in the `documentation/modules` folder with the same structure, including steps to set up the vulnerable environment for testing
 - Module descriptions or documentation should list the range of vulnerable versions and the fixed version of the affected software, when known
+- `report_service` method called when a service can be reported
+- `report_vuln` method called when a vuln can be reported
+- When creating a fake account / username use FAKER not `rand_test_alphanumeric`
+- Always use `res.get_json_document` to convert an HTTP response to a hash instead of calling `JSON.parse(res.body)`
+- If there's only one `ACTION` in the exploit, it can likely be omitted.
+- `Msf::Exploit::SQLi` should be used if it's exploiting an SQLi
+- All `print_*` calls should start with a capital
+- when opening a file, make sure the file exists first
+- when checking for a string in a response - will it always be in english?
+- Ensure hardcoded strings being regex'ed will be consistent across multiple versions
+- Use the TEST-NET-1 range for example / non-routeable IP address: `192.0.2.0`
+- Use fetch payload instead of command stagers when only options that request the stage are available (i.e. don’t use a cmd stager and only allow curl/wget).
+- Define bad characters instead of explicitly base-64 encoding payloads
+- Use `ARCH_CMD` payloads instead of command stagers when only curl/wget and other download mechanisms would be available
+- Don’t check the number of sessions at the end of an exploit and report success based on that, not all payloads open sessions
+- Don’t submit any kind of opaque binary blob, everything must include source code and build instructions
+- Don’t print host information like `#{ip}:#{port}` because it doesn’t handle IPv6 addresses, instead use `#{Rex::Socket.to_authority(ip, port)}`
 - Implement a `check` method when possible to allow users to verify vulnerability before exploitation
+
+### Check Methods
+
 - `check` methods must only return `CheckCode` values (e.g. `CheckCode::Vulnerable`, `CheckCode::Safe`) — never raise exceptions or call `fail_with`
 - When writing a `check` method, verify it does not produce false positives when run against unrelated software or services
 - Use `fail_with(Failure::UnexpectedReply, '...')` (and other `Failure::*` constants) to bail out of `exploit`/`run` methods — don't use `raise` or bare `return` for error conditions
+- `get_version` methods should return a REX version
+- `CheckCode::Vulnerable` is only used when the vulnerability has been exploited
+- `CheckCode::Appears`  is only used when the application's versions has been checked`
+- Don't use a massive `&lt;href .*` dot star to grab the version, to be more precise.
+- Do catch exceptions that may be raised and ensure a valid Check Code is returned
+- Do research and determine a minimum version where the application is vulnerable, mark prior versions as safe
+- Check helper methods that are used by both `#check` and `#exploit` (or `#run`) and make sure there is no condition (exception, return, etc) where `#check` could return something else than CheckCode.
 - Prefer `prepend Msf::Exploit::Remote::AutoCheck` over manually calling `check` inside `exploit` — this lets the framework handle check-before-exploit automatically
 
 ### Library Code
@@ -60,9 +87,12 @@ Metasploit Framework is an open-source penetration testing and exploitation fram
 ### Preferred Libraries
 - Use the `RubySMB` library for SMB modules
 - Use `Rex::Stopwatch.elapsed_time` to track elapsed time
+- Use the `Rex::MIME::Message` class for MIME messages instead of hardcoding XML
+- When creating random variable names prefer `Rex::RandomIdentifier::Generator` and specify the runtime language used. This avoids generating langauge keywords that would break the script.
 
 ## Common Patterns
 - Register options with `register_options` and `register_advanced_options`
+- Use `SCREAMING_SNAKE_CASE` option names and `CamelCase` advanced option names
 - Use `datastore['OPTION_NAME']` to access module options
 - Use `print_status`, `print_good`, `print_error`, `print_warning` for console output
 - Use `vprint_*` variants for verbose-only output
