@@ -69,12 +69,7 @@ class MetasploitModule < Msf::Auxiliary
       return
     end
 
-    parsed = nil
-    begin
-      parsed = JSON.parse(res.body)
-    rescue JSON::ParserError
-      parsed = nil
-    end
+    parsed = res.get_json_document
 
     if res.code == 200
       print_status res.body if datastore['DEBUGJSON'] == true
