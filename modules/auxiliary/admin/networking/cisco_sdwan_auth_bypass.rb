@@ -593,7 +593,7 @@ class MetasploitModule < Msf::Auxiliary
                      /opt/homebrew/opt/openssl@3/lib/lib#{name}.3.dylib
                      /opt/homebrew/opt/openssl/lib/lib#{name}.dylib
                      /opt/local/lib/lib#{name}.3.dylib
-                     /opt/local/lib/lib#{name}.dylib      
+                     /opt/local/lib/lib#{name}.dylib
                    ]
                  else
                    %W[lib#{name}.so]
@@ -601,6 +601,7 @@ class MetasploitModule < Msf::Auxiliary
 
     candidates.each do |path|
       next if path.start_with?('/') && !File.exist?(path)
+
       return Fiddle.dlopen(path)
     rescue Fiddle::DLError
       next
