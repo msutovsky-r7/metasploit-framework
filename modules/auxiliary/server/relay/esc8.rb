@@ -47,7 +47,7 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def relay_targets
-    Msf::Exploit::Remote::SMB::Relay::TargetList.new(
+    Msf::Exploit::Remote::Relay::TargetList.new(
       (datastore['SSL'] ? :https : :http),
       datastore['RPORT'],
       datastore['RHOSTS'],
