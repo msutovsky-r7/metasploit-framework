@@ -264,7 +264,7 @@ class MetasploitModule < Msf::Auxiliary
     privkey_path = nil
 
     if datastore['SSH_PUBLIC_KEY_FILE']
-      # If we are using an existing key suplied by the user, just show how to connect to teh NETCONF service.
+      # If we are using an existing key suplied by the user, just show how to connect to the NETCONF service.
       print_good("Use: ssh -i <SSH_PRIVATE_KEY_FILE> vmanage-admin@#{rhost} -p 830") unless silent
     else
       # If we generated a new key pain, store the private key as loot and write files
