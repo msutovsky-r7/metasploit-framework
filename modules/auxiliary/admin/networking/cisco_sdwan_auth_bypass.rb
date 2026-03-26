@@ -600,6 +600,7 @@ class MetasploitModule < Msf::Auxiliary
                  end
 
     candidates.each do |path|
+      next if path.start_with?('/') && !File.exist?(path)
       return Fiddle.dlopen(path)
     rescue Fiddle::DLError
       next
