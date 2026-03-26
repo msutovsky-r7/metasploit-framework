@@ -585,7 +585,17 @@ class MetasploitModule < Msf::Auxiliary
   def load_native_lib(name)
     candidates = case RUBY_PLATFORM
                  when /mingw|mswin|cygwin/
-                   %W[libssl-3-x64.dll libssl-3.dll lib#{name}]
+                   bin = RbConfig::CONFIG['bindir']
+                   arch_dir = RbConfig::CONFIG['archdir']
+                   site_arch = RbConfig::CONFIG['sitearchdir']
+                   paths = []
+                   [arch_dir, site_arch, bin].compact.uniq.each do |dir|
+                     paths << "#{dir}/lib#{name}-3-x64.dll"
+                     paths << "#{dir}/lib#{name}-3.dll"
+                     paths << "#{dir}/lib#{name}-1_1-x64.dll"
+                   end
+                   paths += %W[lib#{name}-3-x64 lib#{name}-3 lib#{name}]
+                   paths
                  when /darwin/
                    %W[
                      /usr/local/opt/openssl@3/lib/lib#{name}.3.dylib
