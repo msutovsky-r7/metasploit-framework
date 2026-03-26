@@ -1,13 +1,13 @@
 ## Vulnerable Application
 
-Enhacesoft osTicket is a widely-used open-source support ticket system.
-This module exploits an unauthenticated arbitrary file read vulnerability (CVE-2026-22200), which affects Enhancesoft osTicket versions 1.18.x prior to 1.18.3 and 1.17.x prior to 1.17.7.
+Enhancesoft osTicket is a widely-used open-source support ticket system.
+This module exploits an arbitrary file read vulnerability (CVE-2026-22200), which affects Enhancesoft osTicket versions 1.18.x prior to 1.18.3 and 1.17.x prior to 1.17.7. In vulnerable deployments, this issue can often be triggered by unauthenticated or guest users when ticket self-service is enabled; however, the Metasploit module itself currently uses an authenticated workflow and requires valid osTicket credentials.
 ​
 This vulnerability arises due to improper sanitization of PHP filter expressions within rich-text HTML ticket submissions before they are processed by the mPDF PDF generator during export.
 
 To exploit this vulnerability, an attacker submits a ticket containing malicious payload syntax (such as `php://` or `phar://` bypasses like `php:\\` or `./php://`). When the ticket is subsequently exported to PDF, the mPDF library reads the targeted local file and embeds its contents within the generated PDF as a bitmap image. This allows remote attackers to disclose sensitive local files, such as `/etc/passwd` or `include/ost-config.php`, in the context of the osTicket web application user.
 
-This issue is exploitable in default configurations where guests may create tickets and access ticket status, or where self-registration is enabled.
+In real-world deployments, this issue may be exploitable in default configurations where guests may create tickets and access ticket status, or where self-registration is enabled. The provided Metasploit module, however, models an authenticated scenario and assumes you have working staff or admin credentials with permission to create and export tickets to PDF
 
 ## Installation
 
