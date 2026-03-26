@@ -38,13 +38,11 @@ class MetasploitModule < Msf::Auxiliary
         'Author' => ['sfewer-r7'],
         'License' => MSF_LICENSE,
         'References' => [
-          [
-            'CVE', '2026-20127',
-            'URL', 'https://github.com/sfewer-r7/CVE-2026-20127', # PoC
-            'URL', 'https://attackerkb.com/topics/bP3FMvHe7z/cve-2026-20127/rapid7-analysis', # Technical Analysis
-            'URL', 'https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-sdwan-rpa-EHchtZk', # Vendor advisory
-            'URL', 'https://blog.talosintelligence.com/uat-8616-sd-wan/' # Additional advisory from Cisco Talos
-          ]
+          ['CVE', '2026-20127'],
+          ['URL', 'https://github.com/sfewer-r7/CVE-2026-20127'], # PoC
+          ['URL', 'https://attackerkb.com/topics/bP3FMvHe7z/cve-2026-20127/rapid7-analysis'], # Technical Analysis
+          ['URL', 'https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-sdwan-rpa-EHchtZk'], # Vendor advisory
+          ['URL', 'https://blog.talosintelligence.com/uat-8616-sd-wan/'] # Additional advisory from Cisco Talos
         ],
         'DisclosureDate' => '2026-02-25',
         'Notes' => {
