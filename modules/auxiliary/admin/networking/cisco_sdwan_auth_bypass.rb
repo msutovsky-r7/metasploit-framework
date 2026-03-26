@@ -588,9 +588,12 @@ class MetasploitModule < Msf::Auxiliary
                    %W[libssl-3-x64.dll libssl-3.dll lib#{name}]
                  when /darwin/
                    %W[
-                     lib#{name}.dylib
+                     /usr/local/opt/openssl@3/lib/lib#{name}.3.dylib
                      /usr/local/opt/openssl/lib/lib#{name}.dylib
+                     /opt/homebrew/opt/openssl@3/lib/lib#{name}.3.dylib
                      /opt/homebrew/opt/openssl/lib/lib#{name}.dylib
+                     /opt/local/lib/lib#{name}.3.dylib
+                     /opt/local/lib/lib#{name}.dylib      
                    ]
                  else
                    %W[lib#{name}.so]
