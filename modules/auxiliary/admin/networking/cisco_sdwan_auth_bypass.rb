@@ -475,9 +475,6 @@ class MetasploitModule < Msf::Auxiliary
     ef = OpenSSL::X509::ExtensionFactory.new
     ef.subject_certificate = cert
     ef.issuer_certificate = cert
-    cert.add_extension(ef.create_extension('basicConstraints', 'CA:TRUE', true))
-    cert.add_extension(ef.create_extension('subjectKeyIdentifier', 'hash'))
-    cert.add_extension(ef.create_extension('authorityKeyIdentifier', 'keyid:always,issuer:always'))
 
     cert.sign(key, OpenSSL::Digest.new('SHA256'))
 
