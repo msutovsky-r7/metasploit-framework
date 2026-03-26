@@ -56,15 +56,6 @@ Path to an existing SSH public key file (in OpenSSH format) to inject into the c
 If not set, the module will automatically generate a new RSA 2048-bit SSH keypair. Using an existing key can be useful
 if you want to maintain access using a key you already control.
 
-### STORE_SSH_KEY_FILES
-
-Directory where generated SSH key files will be saved. Default: system temp directory (e.g., `/tmp`).
-
-If `SSH_PUBLIC_KEY_FILE` is not specified and the module generates a new keypair, both the private and public keys
-will be saved to this directory with a unique filename based on the target IP, port, and timestamp.
-
-The private key will be set to mode 0600 (read/write for owner only) for security.
-
 ## Scenarios
 
 ### Cisco Catalyst SD-WAN Controller 20.15.3 (Default Configuration)
@@ -85,7 +76,6 @@ Module options (auxiliary/admin/networking/cisco_sdwan_auth_bypass):
    RPORT                12346            yes       The target port (UDP)
    SITE_ID              100              yes       SD-WAN site ID
    SSH_PUBLIC_KEY_FILE                   no        Path to an existing SSH public key file to inject
-   STORE_SSH_KEY_FILES  /tmp             no        Directory to store generated SSH key files
 
 
 View the full module info with the info, or info -d command.

