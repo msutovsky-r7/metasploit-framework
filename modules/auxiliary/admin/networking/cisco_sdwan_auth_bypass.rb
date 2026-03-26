@@ -84,9 +84,6 @@ class MetasploitModule < Msf::Auxiliary
     else
       print_error('Exploit failed')
     end
-  rescue ::StandardError => e
-    print_error("Module failed: #{e.message}")
-    vprint_error(e.backtrace.join("\n"))
   end
 
   private
