@@ -1,5 +1,3 @@
-# HTTP PUT File Upload Scanner
-
 ## Vulnerable Application
 
 This module targets web servers that allow HTTP PUT and DELETE methods without proper restrictions.
@@ -19,38 +17,47 @@ To test this module:
 2. Ensure HTTP PUT/DELETE methods are enabled
 3. Confirm lack of authentication or access control
 
----
-
-## Description
-
-This module abuses misconfigured web servers to upload and delete web content via HTTP PUT and DELETE requests.
-
----
-
 ## Verification Steps
 
-1. Start Metasploit:
-   ```bash
-   msfconsole
-   ```
+1. Start Metasploit: `msfconsole`
+2. Load the module: `use auxiliary/scanner/http/http_put`
+3. Set options:
+   - `set RHOSTS [IP]`
+   - `set RPORT [PORT]`
+   - `set PATH [PATH]`
+   - `set FILENAME [FILENAME]`
+   - `set FILEDATA [PATH]`
+4. Run: `run`
 
-2. Load the module:
-   ```bash
-   use auxiliary/scanner/http/http_put
-   ```
+If vulnerable, the module will confirm successful upload or deletion.
 
-3. Set required options:
-   ```bash
-   set RHOSTS [IP]
-   set RPORT [PORT]
-   set PATH [PATH]
-   set FILENAME [FILENAME]
-   set FILEDATA [PATH]
-   ```
+## Options
 
-4. Run the module:
-   ```bash
-   run
-   ```
+### ACTION
+Set `ACTION` to either `PUT` or `DELETE`. Default is `PUT`.
 
-5. If vulnerable, the module will confirm successful upload or deletion.
+### PUT
+Uploads files to the server. If `FILENAME` is not specified, a random `.txt` file is generated.
+
+### DELETE
+Deletes the file specified in `FILENAME`.
+
+### PATH
+Target path for upload or deletion.
+
+### FILEDATA
+Content to upload when using PUT.
+
+## Scenarios
+
+Example usage:
+
+`use auxiliary/scanner/http/http_put`  
+`set RHOSTS 1.1.1.23`  
+`set RPORT 8585`  
+`set PATH /uploads`  
+`set FILENAME test.php`  
+`set FILEDATA file://root/Desktop/test.php`  
+`run`
+
+If vulnerable, the file will be uploaded or deleted successfully.
