@@ -53,7 +53,7 @@ class MetasploitModule < Msf::Auxiliary
 
     register_options(
       [
-        OptString.new('TARGET_URI', [true, 'Base path to osTicket installation', '/']),
+        OptString.new('TARGETURI', [true, 'Base path to osTicket installation', '/']),
         OptString.new('USERNAME', [true, 'osTicket username or email address']),
         OptString.new('PASSWORD', [true, 'osTicket password']),
         OptString.new('TICKET_NUMBER', [false, 'Ticket number to use for payload injection (e.g. 978554). If not set, a new ticket is created each run']),
@@ -85,14 +85,10 @@ class MetasploitModule < Msf::Auxiliary
     )
   end
 
-  def target_uri
-    datastore['TARGET_URI']
-  end
-
   def check
     begin
       res = send_request_cgi!(
-        { 'method' => 'GET', 'uri' => normalize_uri(target_uri) },
+        { 'method' => 'GET', 'uri' => normalize_uri(datastore['TARGETURI']) },
         20,
         datastore['MAX_REDIRECTS']
       )
@@ -108,7 +104,7 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def run
-    base_uri = target_uri
+    base_uri = datastore['TARGETURI']
     file_raw = datastore['FILE'].to_s.strip
 
     fail_with(Failure::BadConfig, 'No file specified in FILE option') if file_raw.empty?
