@@ -16,10 +16,17 @@ To test this module:
 
 ## Verification Steps
 
-1. Start Metasploit: `msfconsole`
-2. Load the module: `use auxiliary/scanner/http/wordpress_pingback_access`
-3. Set the target: `set RHOSTS <target_ip_or_domain>`
-4. Run the module: `run`
+1. Start Metasploit:
+   `msfconsole`
+
+2. Load the module:
+   `use auxiliary/scanner/http/wordpress_pingback_access`
+
+3. Set the target:
+   `set RHOSTS example.com`
+
+4. Run the module:
+   `run`
 
 If vulnerable, the module will indicate that pingback access is enabled.
 
@@ -36,8 +43,18 @@ Number of concurrent threads.
 
 ## Scenarios
 
-This module can be used in:
+Example run:
 
-- Security assessments to identify exposed XML-RPC endpoints
-- Detecting potential DDoS amplification vectors
-- Enumerating WordPress misconfigurations
+```bash
+msfconsole
+use auxiliary/scanner/http/wordpress_pingback_access
+set RHOSTS example.com
+run
+```
+
+```
+[*] Checking pingback access on example.com
+[+] Pingback is enabled and accessible at /xmlrpc.php
+[*] Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+```
