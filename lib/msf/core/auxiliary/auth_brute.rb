@@ -266,7 +266,7 @@ module Auxiliary::AuthBrute
   # The 'noconn' argument should be set to true if each_user_pass is merely
   # iterating over the usernames and passwords and should not respect
   # bruteforce_speed as a delaying factor.
-
+  #
   # @param [Boolean] noconn When `true`, skips the usual per-attempt delay because no connection is made.
   # @yield [username, password] Gives each username/password pair to the caller.
   # @yieldparam [String] username Username to attempt.
