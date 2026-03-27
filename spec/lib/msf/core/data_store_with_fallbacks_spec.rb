@@ -173,7 +173,7 @@ RSpec.shared_examples_for 'a datastore' do
         'bar' => bar_option
       }
 
-      expect(subject.options).to eq(expected_options)
+      expect(subject.options.instance_values).to eq(expected_options.instance_values)
     end
   end
 
