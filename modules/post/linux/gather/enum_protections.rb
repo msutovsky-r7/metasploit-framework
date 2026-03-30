@@ -61,7 +61,7 @@ class MetasploitModule < Msf::Post
     end
   end
 
-  def report(data)
+  def report(**data)
     report_note(
       host: session,
       type: 'linux.protection',
@@ -89,7 +89,7 @@ class MetasploitModule < Msf::Post
     hardening_checks.each do |check, message|
       if send(check)
         print_good message
-        report(message)
+        report(message: message)
       end
     rescue RuntimeError => e
       vprint_status(e.to_s)
@@ -104,7 +104,7 @@ class MetasploitModule < Msf::Post
               'SELinux is installed, but in permissive mode'
             end
         print_good(r)
-        report(r)
+        report(message: r)
       end
     rescue RuntimeError => e
       vprint_status(e.to_s)
@@ -119,7 +119,7 @@ class MetasploitModule < Msf::Post
               'Yama is installed, but not enabled'
             end
         print_good(r)
-        report(r)
+        report(message: r)
       end
     rescue RuntimeError => e
       vprint_status(e.to_s)
@@ -130,7 +130,7 @@ class MetasploitModule < Msf::Post
       if userns_enabled?
         r = 'User namespaces are enabled (unprivileged may be available)'
         print_good(r)
-        report(r)
+        report(message: r)
       end
     rescue RuntimeError => e
       vprint_status(e.to_s)
@@ -196,7 +196,7 @@ class MetasploitModule < Msf::Post
       next unless path.start_with? '/'
 
       print_good("#{app} found: #{path}")
-      report("#{appname}: #{path}")
+      report(message: "Found: #{appname}", path: path)
     end
   end
 
@@ -279,7 +279,7 @@ class MetasploitModule < Msf::Post
       next unless file_exist?(path) || directory?(path)
 
       print_good("#{appname} found: #{path}")
-      report("#{appname}: #{path}")
+      report(message: "#{appname}: #{path}")
     rescue RuntimeError
       print_bad("Unable to determine state of #{appname}")
       next
