@@ -35,7 +35,7 @@ class MetasploitModule < Msf::Auxiliary
     ])
 
     deregister_options(
-      "RHOST", "USERNAME", "PASSWORD", "USER_FILE", "PASS_FILE", "USERPASS_FILE",
+      "USERNAME", "PASSWORD", "USER_FILE", "PASS_FILE", "USERPASS_FILE",
       "BLANK_PASSWORDS", "USER_AS_PASS", "REMOVE_USER_FILE", "REMOVE_PASS_FILE",
       "BRUTEFORCE_SPEED" # Slow as heck anyway
     )
