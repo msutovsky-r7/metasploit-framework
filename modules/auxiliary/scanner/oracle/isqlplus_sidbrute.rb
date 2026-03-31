@@ -188,7 +188,7 @@ class MetasploitModule < Msf::Auxiliary
       :proto => 'tcp',
       :port => rport,
       :type => "oracle.sid",
-      :data => ((sid.nil? || sid.empty?) ? "*BLANK*" : sid),
+      :data => { :sid => ((sid.nil? || sid.empty?) ? "*BLANK*" : sid) },
       :update => :unique_data
     )
   end
