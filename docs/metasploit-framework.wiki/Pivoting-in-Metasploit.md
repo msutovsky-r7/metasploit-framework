@@ -567,7 +567,7 @@ index.html             100%[===========================>]  57.34K  --.-KB/s    i
 ```
 
 ### Scanning
-For scanning with Nmap, Zenmap, Nessus and others, keep in mind that ICMP and UPD traffic cannot tunnel through the proxy. So you cannot perform ping or UDP scans.
+For scanning with Nmap, Zenmap, Nessus and others, keep in mind that ICMP and UDP traffic cannot tunnel through the proxy. So you cannot perform ping or UDP scans.
 
 For Nmap and Zenmap, the below example shows the commands can be used. It is best to be selective on ports to scan since scanning through the proxy tunnel can be slow.
 
