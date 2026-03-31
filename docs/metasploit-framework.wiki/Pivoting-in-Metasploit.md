@@ -444,7 +444,7 @@ Now edit the `proxychains` configuration file located at `/etc/proxychains.conf`
 socks5 127.0.0.1 1080
 ```
 
-The final should look something like this:
+The final file should look something like this:
 
 ```ini
 # proxychains.conf  VER 3.1
