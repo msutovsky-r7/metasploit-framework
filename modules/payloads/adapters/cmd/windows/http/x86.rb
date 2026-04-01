@@ -12,12 +12,12 @@ module MetasploitModule
       update_info(
         info,
         'Name' => 'HTTP Fetch',
-        'Description' => 'Fetch and execute an x64 payload from an HTTP server.',
+        'Description' => 'Fetch and execute an x86 payload from an HTTP server.',
         'Author' => 'Brendan Watters',
         'Platform' => 'win',
         'Arch' => ARCH_CMD,
         'License' => MSF_LICENSE,
-        'AdaptedArch' => ARCH_X64,
+        'AdaptedArch' => ARCH_X86,
         'AdaptedPlatform' => 'win'
       )
     )
