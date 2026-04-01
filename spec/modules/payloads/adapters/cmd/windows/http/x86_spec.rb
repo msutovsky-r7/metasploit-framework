@@ -87,8 +87,8 @@ RSpec.describe 'cmd/windows/http/x86' do
       expect(subject.options['FETCH_COMMAND'].valid?('CURL')).to be(true)
     end
 
-    it 'accepts TFTP as a valid value' do
-      expect(subject.options['FETCH_COMMAND'].valid?('TFTP')).to be(true)
+    it 'rejects TFTP as an invalid value' do
+      expect(subject.options['FETCH_COMMAND'].valid?('TFTP')).to be(false)
     end
 
     it 'accepts CERTUTIL as a valid value' do
@@ -166,16 +166,6 @@ RSpec.describe 'cmd/windows/http/x86' do
       end
     end
 
-    # The TFTP client requires a TFTP server (fetch_protocol='TFTP'), so using
-    # TFTP as the FETCH_COMMAND with an HTTP adapter always fails at runtime.
-    context 'with TFTP' do
-      let(:fetch_command) { 'TFTP' }
-      let(:fetch_srvport) { 69 }
-
-      it 'raises a bad-config error because the HTTP adapter cannot serve TFTP' do
-        expect { subject.generate_fetch_commands }.to raise_error(RuntimeError, /bad-config/)
-      end
-    end
   end
 
   describe '#fetch_protocol' do

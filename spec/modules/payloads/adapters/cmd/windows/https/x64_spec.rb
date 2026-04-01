@@ -87,12 +87,12 @@ RSpec.describe 'cmd/windows/https/x64' do
       expect(subject.options['FETCH_COMMAND'].valid?('CURL')).to be(true)
     end
 
-    it 'accepts TFTP as a valid value' do
-      expect(subject.options['FETCH_COMMAND'].valid?('TFTP')).to be(true)
+    it 'rejects TFTP as an invalid value' do
+      expect(subject.options['FETCH_COMMAND'].valid?('TFTP')).to be(false)
     end
 
-    it 'accepts CERTUTIL as a valid value' do
-      expect(subject.options['FETCH_COMMAND'].valid?('CERTUTIL')).to be(true)
+    it 'rejects CERTUTIL as an invalid value' do
+      expect(subject.options['FETCH_COMMAND'].valid?('CERTUTIL')).to be(false)
     end
 
     it 'rejects WGET as an invalid value' do
@@ -137,25 +137,6 @@ RSpec.describe 'cmd/windows/https/x64' do
       end
     end
 
-    # CERTUTIL does not support HTTPS — it always raises a bad-config error.
-    context 'with CERTUTIL' do
-      let(:fetch_command) { 'CERTUTIL' }
-
-      it 'raises a bad-config error because CERTUTIL does not support HTTPS' do
-        expect { subject.generate_fetch_commands }.to raise_error(RuntimeError, /bad-config/)
-      end
-    end
-
-    # The TFTP client requires a TFTP server (fetch_protocol='TFTP'), so using
-    # TFTP as the FETCH_COMMAND with an HTTPS adapter always fails at runtime.
-    context 'with TFTP' do
-      let(:fetch_command) { 'TFTP' }
-      let(:fetch_srvport) { 69 }
-
-      it 'raises a bad-config error because the HTTPS adapter cannot serve TFTP' do
-        expect { subject.generate_fetch_commands }.to raise_error(RuntimeError, /bad-config/)
-      end
-    end
   end
 
   describe '#fetch_protocol' do
