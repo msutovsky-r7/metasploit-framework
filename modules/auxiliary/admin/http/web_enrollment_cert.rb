@@ -22,7 +22,6 @@ class MetasploitModule < Msf::Auxiliary
       ],
       'License' => MSF_LICENSE
     })
-    # deregister_options('CA', 'CERT_TEMPLATE', 'ADD_CERT_APP_POLICY', 'RPORT', 'SMBDomain', 'SMBPassword')
     deregister_options('HttpUsername', 'HttpPassword')
     register_options([
       Opt::RPORT(80),
@@ -54,10 +53,10 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def pull_domain(target_ip, target_uri)
+    temp_username = datastore['HttpUsername']
+    temp_password = datastore['HttpPassword']
     begin
       vprint_status("Checking #{target_ip} URL #{target_uri}")
-      temp_username = datastore['HttpUsername']
-      temp_password = datastore['HttpPassword']
       # datastore and options must be nil to fail login so we get ntlm challenge
       datastore['HttpUsername'] = nil
       datastore['HttpPassword'] = nil
@@ -76,6 +75,9 @@ class MetasploitModule < Msf::Auxiliary
     rescue ::Timeout::Error, ::Errno::EPIPE
       vprint_error('Timeout error')
       return
+    ensure
+      datastore['HttpUsername'] = temp_username
+      datastore['HttpPassword'] = temp_password
     end
     datastore['HttpUsername'] = temp_username
     datastore['HttpPassword'] = temp_password
@@ -84,19 +86,30 @@ class MetasploitModule < Msf::Auxiliary
 
     unless res && res.code == 401
       print_bad("Incorrect status code returned checking for domain: #{res.code}")
+      return nil
     end
     unless res['WWW-Authenticate']
       print_bad('Target does not appear to support Windows Authentication.')
+      return nil
     end
     unless res['WWW-Authenticate'].match(/^NTLM/i)
       print_bad('Target does not appear to support NTLM.')
+      return nil
     end
 
     hash = res['WWW-Authenticate'].split('NTLM ')[1]
+    return nil if hash.nil?
+
     # Parse out the NTLM and get the Target Information Data containing the domain name
-    message = Net::NTLM::Message.parse(Base64.decode64(hash))
-    ti = Net::NTLM::TargetInfo.new(message.target_info)
-    ti.av_pairs[Net::NTLM::TargetInfo::MSV_AV_NB_DOMAIN_NAME]
+
+    begin
+      message = Net::NTLM::Message.parse(Base64.decode64(hash))
+      ti = Net::NTLM::TargetInfo.new(message.target_info)
+      ti.av_pairs[Net::NTLM::TargetInfo::MSV_AV_NB_DOMAIN_NAME]
+    rescue StandardError => e
+      vprint_error("Failed to parse NTLM challenge: #{e.class}: #{e}")
+      nil
+    end
   end
 
   def run_host(target_ip)
@@ -133,7 +146,7 @@ class MetasploitModule < Msf::Auxiliary
       cert_templates = get_cert_templates(http_client)
       unless cert_templates.nil? || cert_templates.empty?
         print_status('***Templates with CT_FLAG_MACHINE_TYPE set like Machine and DomainController will not display as available, even if they are.***')
-        print_good("Available Certificates for #{connection_identity} on #{datastore['RELAY_TARGET']}: #{cert_templates.join(', ')}")
+        print_good("Available Certificates for #{connection_identity} on #{datastore['RHOST']}: #{cert_templates.join(', ')}")
         if datastore['MODE'] == 'ALL'
           retrieve_certs(target_ip, http_client, connection_identity, cert_templates)
         end

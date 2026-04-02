@@ -1,9 +1,16 @@
 module Rex::Proto::X509
 
+  # [2.2.2.7.7.4 szOID_NTDS_CA_SECURITY_EXT](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-wcce/e563cff8-1af6-4e6f-a655-7571ca482e71)
+  OID_NTDS_CA_SECURITY_EXT = '1.3.6.1.4.1.311.25.2'.freeze
   # [2.2.2.7.5 szOID_NT_PRINCIPAL_NAME](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-wcce/ea9ef420-4cbf-44bc-b093-c4175139f90f)
   OID_NT_PRINCIPAL_NAME = '1.3.6.1.4.1.311.20.2.3'.freeze
+  # [[MS-WCCE]: Windows Client Certificate Enrollment Protocol](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-winerrata/c39fd72a-da21-4b13-b329-c35d61f74a60)
+  OID_NTDS_OBJECTSID = '1.3.6.1.4.1.311.25.2.1'.freeze
   # [[MS-WCCE]: 2.2.2.7.10 szENROLLMENT_NAME_VALUE_PAIR](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-wcce/92f07a54-2889-45e3-afd0-94b60daa80ec)
   OID_ENROLLMENT_NAME_VALUE_PAIR = '1.3.6.1.4.1.311.13.2.1'.freeze
+  # [[MS-WCCE]: 2.2.2.7.7.3 Encoding a Certificate Application Policy Extension](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-wcce/160b96b1-c431-457a-8eed-27c11873f378)
+  OID_APPLICATION_CERT_POLICIES = '1.3.6.1.4.1.311.21.10'.freeze
+  SAN_URL_PREFIX = "tag:microsoft.com,2022-09-14:sid:"
 
   class Request
     def self.create_csr(private_key, cn, algorithm = 'SHA256')

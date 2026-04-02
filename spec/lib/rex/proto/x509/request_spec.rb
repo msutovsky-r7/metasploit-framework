@@ -2,6 +2,34 @@ require 'rspec'
 require 'rex/proto/kerberos/model/pkinit'
 require 'rex/proto/x509/request'
 
+RSpec.describe Rex::Proto::X509 do
+  describe 'module constants' do
+    it 'defines OID_NTDS_CA_SECURITY_EXT' do
+      expect(described_class::OID_NTDS_CA_SECURITY_EXT).to eq('1.3.6.1.4.1.311.25.2')
+    end
+
+    it 'defines OID_NTDS_OBJECTSID' do
+      expect(described_class::OID_NTDS_OBJECTSID).to eq('1.3.6.1.4.1.311.25.2.1')
+    end
+
+    it 'defines OID_NT_PRINCIPAL_NAME' do
+      expect(described_class::OID_NT_PRINCIPAL_NAME).to eq('1.3.6.1.4.1.311.20.2.3')
+    end
+
+    it 'defines OID_ENROLLMENT_NAME_VALUE_PAIR' do
+      expect(described_class::OID_ENROLLMENT_NAME_VALUE_PAIR).to eq('1.3.6.1.4.1.311.13.2.1')
+    end
+
+    it 'defines OID_APPLICATION_CERT_POLICIES' do
+      expect(described_class::OID_APPLICATION_CERT_POLICIES).to eq('1.3.6.1.4.1.311.21.10')
+    end
+
+    it 'defines SAN_URL_PREFIX' do
+      expect(described_class::SAN_URL_PREFIX).to eq('tag:microsoft.com,2022-09-14:sid:')
+    end
+  end
+end
+
 RSpec.describe Rex::Proto::X509::Request do
   include_context 'Msf::UIDriver'
   include_context 'Msf::Simple::Framework#modules loading'
@@ -347,6 +375,232 @@ RSpec.describe Rex::Proto::X509::Request do
           algorithm: 'MD4'
         )
       }.to raise_error(ArgumentError)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  describe '.create_csr' do
+    it 'returns an OpenSSL::X509::Request' do
+      expect(described_class.create_csr(pkcs12_key, 'testuser')).to be_a(OpenSSL::X509::Request)
+    end
+
+    it 'sets the CN in the subject' do
+      result = described_class.create_csr(pkcs12_key, 'testuser')
+      cn_entry = result.subject.to_a.find { |oid, _value, _type| oid == 'CN' }
+      expect(cn_entry[1]).to eq('testuser')
+    end
+
+    it 'embeds the correct public key' do
+      result = described_class.create_csr(pkcs12_key, 'testuser')
+      expect(result.public_key.to_der).to eq(pkcs12_key.public_key.to_der)
+    end
+
+    it 'produces a CSR that verifies with the private key' do
+      result = described_class.create_csr(pkcs12_key, 'testuser')
+      expect(result.verify(pkcs12_key.public_key)).to be true
+    end
+
+    it 'uses SHA256 by default' do
+      result = described_class.create_csr(pkcs12_key, 'testuser')
+      expect(result.signature_algorithm).to eq('sha256WithRSAEncryption')
+    end
+
+    it 'uses the provided algorithm' do
+      result = described_class.create_csr(pkcs12_key, 'testuser', 'SHA512')
+      expect(result.signature_algorithm).to eq('sha512WithRSAEncryption')
+    end
+
+    it 'yields the request to the block before signing' do
+      yielded_request = nil
+      described_class.create_csr(pkcs12_key, 'testuser') { |req| yielded_request = req }
+      expect(yielded_request).to be_a(OpenSSL::X509::Request)
+    end
+
+    it 'produces a valid CSR even when the block does not modify the request' do
+      result = described_class.create_csr(pkcs12_key, 'testuser') { |_req| }
+      expect(result.verify(pkcs12_key.public_key)).to be true
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  describe '.build_csr — subject, key and signature' do
+    let(:result) { described_class.build_csr(cn: 'alice', private_key: pkcs12_key) }
+
+    it 'sets the CN in the subject' do
+      cn_entry = result.subject.to_a.find { |oid, _value, _type| oid == 'CN' }
+      expect(cn_entry[1]).to eq('alice')
+    end
+
+    it 'embeds the correct public key' do
+      expect(result.public_key.to_der).to eq(pkcs12_key.public_key.to_der)
+    end
+
+    it 'produces a CSR that verifies with the private key' do
+      expect(result.verify(pkcs12_key.public_key)).to be true
+    end
+
+    it 'uses SHA256 by default' do
+      expect(result.signature_algorithm).to eq('sha256WithRSAEncryption')
+    end
+  end
+
+  describe '.build_csr — algorithm' do
+    it 'uses SHA512 when requested' do
+      result = described_class.build_csr(cn: 'alice', private_key: pkcs12_key, algorithm: 'SHA512')
+      expect(result.signature_algorithm).to eq('sha512WithRSAEncryption')
+    end
+
+    it 'produces a valid SHA512-signed CSR' do
+      result = described_class.build_csr(cn: 'alice', private_key: pkcs12_key, algorithm: 'SHA512')
+      expect(result.verify(pkcs12_key.public_key)).to be true
+    end
+
+    it 'uses SHA1 when requested' do
+      result = described_class.build_csr(cn: 'alice', private_key: pkcs12_key, algorithm: 'SHA1')
+      expect(result.signature_algorithm).to eq('sha1WithRSAEncryption')
+    end
+  end
+
+  describe '.build_csr — extensions' do
+    context 'with no optional params' do
+      it 'does not add an extReq attribute' do
+        result = described_class.build_csr(cn: 'alice', private_key: pkcs12_key)
+        expect(result.attributes.map(&:oid)).not_to include('extReq')
+      end
+    end
+
+    context 'with dns:' do
+      let(:result) { described_class.build_csr(cn: 'alice', private_key: pkcs12_key, dns: 'host.example.com') }
+
+      it 'adds an extReq attribute' do
+        expect(result.attributes.map(&:oid)).to include('extReq')
+      end
+
+      it 'embeds the DNS name in the CSR' do
+        expect(result.to_der).to include('host.example.com')
+      end
+
+      it 'still produces a verifiable CSR' do
+        expect(result.verify(pkcs12_key.public_key)).to be true
+      end
+    end
+
+    context 'with msext_upn:' do
+      let(:result) { described_class.build_csr(cn: 'alice', private_key: pkcs12_key, msext_upn: 'alice@example.com') }
+
+      it 'adds an extReq attribute' do
+        expect(result.attributes.map(&:oid)).to include('extReq')
+      end
+
+      it 'embeds the UPN in the CSR' do
+        expect(result.to_der).to include('alice@example.com')
+      end
+
+      it 'still produces a verifiable CSR' do
+        expect(result.verify(pkcs12_key.public_key)).to be true
+      end
+    end
+
+    context 'with application_policies:' do
+      let(:policy_oid) { '1.3.6.1.5.5.7.3.2' }
+      let(:result) { described_class.build_csr(cn: 'alice', private_key: pkcs12_key, application_policies: [policy_oid]) }
+
+      it 'adds an extReq attribute' do
+        expect(result.attributes.map(&:oid)).to include('extReq')
+      end
+
+      it 'embeds the policy OID in the CSR' do
+        policy_oid_der = OpenSSL::ASN1::ObjectId.new(policy_oid).to_der
+        expect(result.to_der).to include(policy_oid_der)
+      end
+
+      it 'still produces a verifiable CSR' do
+        expect(result.verify(pkcs12_key.public_key)).to be true
+      end
+    end
+
+    context 'with multiple application policies' do
+      let(:policy_oids) { ['1.3.6.1.5.5.7.3.2', '1.3.6.1.5.5.7.3.4'] }
+      let(:result) { described_class.build_csr(cn: 'alice', private_key: pkcs12_key, application_policies: policy_oids) }
+
+      it 'embeds all policy OIDs in the CSR' do
+        policy_oids.each do |oid|
+          expect(result.to_der).to include(OpenSSL::ASN1::ObjectId.new(oid).to_der)
+        end
+      end
+    end
+
+    context 'with dns: and msext_upn: combined' do
+      let(:result) do
+        described_class.build_csr(
+          cn: 'alice',
+          private_key: pkcs12_key,
+          dns: 'host.example.com',
+          msext_upn: 'alice@example.com'
+        )
+      end
+
+      it 'embeds both the DNS name and the UPN' do
+        expect(result.to_der).to include('host.example.com')
+        expect(result.to_der).to include('alice@example.com')
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  describe '#build_on_behalf_of — algorithm variants' do
+    it 'accepts SHA512 and returns a ContentInfo' do
+      result = described_class.build_on_behalf_of(
+        csr: x509_csr,
+        on_behalf_of: 'MSFLAB\\smcintyre',
+        cert: pkcs12_certificate,
+        key: pkcs12_key,
+        algorithm: 'SHA512'
+      )
+      expect(result).to be_a(Rex::Proto::CryptoAsn1::Cms::ContentInfo)
+    end
+
+    it 'produces serialisable output with SHA512' do
+      result = described_class.build_on_behalf_of(
+        csr: x509_csr,
+        on_behalf_of: 'MSFLAB\\smcintyre',
+        cert: pkcs12_certificate,
+        key: pkcs12_key,
+        algorithm: 'SHA512'
+      )
+      expect { result.to_der }.not_to raise_error
+    end
+
+    it 'accepts SHA1 and returns a ContentInfo' do
+      result = described_class.build_on_behalf_of(
+        csr: x509_csr,
+        on_behalf_of: 'MSFLAB\\smcintyre',
+        cert: pkcs12_certificate,
+        key: pkcs12_key,
+        algorithm: 'SHA1'
+      )
+      expect(result).to be_a(Rex::Proto::CryptoAsn1::Cms::ContentInfo)
+    end
+  end
+
+  describe '#build_on_behalf_of — encapsulated content' do
+    let(:result) do
+      described_class.build_on_behalf_of(
+        csr: x509_csr,
+        on_behalf_of: 'MSFLAB\\smcintyre',
+        cert: pkcs12_certificate,
+        key: pkcs12_key
+      )
+    end
+
+    it 'embeds the original CSR DER in the output' do
+      expect(result.to_der).to include(x509_csr.to_der)
+    end
+
+    it 'embeds the on_behalf_of username in the signed attributes' do
+      # The username is encoded as a BMPString (UCS-2 big-endian) in the EnrollmentNameValuePair
+      ucs2_username = 'MSFLAB\\smcintyre'.encode('UTF-16BE').b
+      expect(result.to_der).to include(ucs2_username)
     end
   end
 end

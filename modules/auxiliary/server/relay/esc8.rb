@@ -24,7 +24,7 @@ class MetasploitModule < Msf::Auxiliary
       ],
       'License' => MSF_LICENSE,
       'Actions' => [[ 'Relay', { 'Description' => 'Run SMB ESC8 relay server' } ]],
-      'DefaultOptions' => { 'Http::Auth' => 'ntlm' },
+      'DefaultOptions' => { 'HTTP::Auth' => 'ntlm' },
       'PassiveActions' => [ 'Relay' ],
       'DefaultAction' => 'Relay'
     })
