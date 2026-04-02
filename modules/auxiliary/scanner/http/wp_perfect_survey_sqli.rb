@@ -67,7 +67,7 @@ class MetasploitModule < Msf::Auxiliary
       next GET_SQLI_OBJECT_FAILED_ERROR_MSG unless res.code == 200
 
       html_content = res.get_json_document['html']
-      fail_with(Failure::Unknown, 'HTML content is empty') unless html_content
+      next GET_SQLI_OBJECT_FAILED_ERROR_MSG unless html_content
 
       # Extract data from response
       match_data = /survey_question_p">([^<]+)/.match(html_content)
