@@ -162,7 +162,9 @@ module Msf
     def add_option(option, name = nil, owner = nil, advanced = false, evasion = false)
       if option.kind_of?(Array)
         option = option.shift.new(name, option)
-      elsif !option.kind_of?(OptBase)
+      elsif option.kind_of?(OptBase)
+        option = option.dup
+      else
         raise ArgumentError,
           "The option named #{name} did not come in a compatible format.",
           caller
