@@ -10,8 +10,6 @@ require 'rex/post/meterpreter/client'
 require 'rex/socket/x509_certificate'
 
 require 'openssl'
-require 'pry'
-require 'pry-byebug'
 
 module Rex
 module Post
@@ -1035,7 +1033,7 @@ private
     # Create the migrate stager
     migrate_stager = c.new()
 
-    migrate_stager.stage_meterpreter({MeterpreterDebugBuild: client.debug_build, scheme: scheme, uuid: uuid, uri: url, stageless: true})
+    migrate_stager.stage_meterpreter({MeterpreterDebugBuild: client.debug_build, scheme: scheme, uuid: uuid, override_uri: url, stageless: true})
   end
 
   #
