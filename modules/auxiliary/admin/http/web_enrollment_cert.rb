@@ -129,7 +129,7 @@ class MetasploitModule < Msf::Auxiliary
       if datastore['DOMAIN'] != 'WORKSTATION' && queried_domain != datastore_domain
         fail_with(Failure::UnexpectedReply, "Server claims to be a member of #{queried_domain} domain and does not match the datastore domain entry #{datastore['DOMAIN']}")
       end
-      connection_identity = queried_domain + '\\\\' + datastore['HttpUsername']
+      connection_identity = queried_domain + '\\' + datastore['HttpUsername']
     end
     http_client = connect(
       {
