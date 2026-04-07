@@ -550,12 +550,12 @@ module Msf
       vprint_status("extract_files_from_pdf: Processing PDF (#{pdf_data.length} bytes)")
       results = []
 
-      # Primary: Extract image XObjects, swap RGB→BGR, search for marker
+      # Primary: Extract image XObjects, swap RGB for BGR, search for marker
       image_streams = extract_pdf_image_streams(pdf_data)
       vprint_status("extract_files_from_pdf: Found #{image_streams.length} image XObject streams")
 
       image_streams.each_with_index do |img_data, idx|
-        # Swap RGB→BGR to restore original BMP pixel byte order
+        # Swap RGB for BGR to restore original BMP pixel byte order
         bgr_data = swap_rgb_bgr(img_data)
         vprint_status("extract_files_from_pdf: Image ##{idx}: #{img_data.length} bytes, swapped to BGR")
 
@@ -655,8 +655,8 @@ module Msf
       images
     end
 
-    # Swaps byte order in every 3-byte triplet: [R,G,B] → [B,G,R].
-    # This reverses the BGR→RGB conversion that mPDF performs when
+    # Swaps byte order in every 3-byte triplet: [R,G,B] to [B,G,R].
+    # This reverses the BGR / RGB conversion that mPDF performs when
     # embedding BMP pixel data into a PDF image XObject.
     #
     # @param data [String] RGB pixel data
@@ -951,7 +951,7 @@ module Msf
     # Extracts the first usable topicId from the static open.php HTML.
     #
     # NOTE: osTicket loads the subject/message form fields dynamically via AJAX
-    # (ajax.php/form/help-topic/{id}) when a topic is chosen — they are NOT in
+    # (ajax.php/form/help-topic/{id}) when a topic is chosen, they are NOT in
     # the initial open.php response. Call fetch_topic_form_fields separately.
     #
     # @param html [String] HTML of open.php
@@ -1158,12 +1158,12 @@ module Msf
     end
 
     # -------------------------------------------------------------------------
-    # SCP portal — ticket creation helpers
+    # SCP portal - ticket creation helpers
     # -------------------------------------------------------------------------
 
     # Fetches static form fields from the SCP new-ticket page.
     #
-    # GET {prefix}/tickets.php?a=open → extracts CSRF token and the first
+    # GET {prefix}/tickets.php?a=open - extracts CSRF token and the first
     # non-empty option values for topicId, deptId, and slaId selects.
     #
     # @param base_uri [String] base path to osTicket
@@ -1368,7 +1368,7 @@ module Msf
     # retrieve the internal ID.
     #
     # NOTE: The email and fullname values come from SCP_TICKET_EMAIL /
-    # SCP_TICKET_NAME datastore options — they are NOT the attacker's login
+    # SCP_TICKET_NAME datastore options - they are NOT the attacker's login
     # credentials and are only used here to assign ownership of the created
     # ticket.
     #
@@ -1459,11 +1459,11 @@ module Msf
     # through a valid SCP portal login.
     #
     # Flow:
-    #   1. fetch_open_form_fields_scp   — CSRF, topicId, deptId, slaId
-    #   2. fetch_topic_form_fields_scp  — subject/message hex-hash field names
-    #   3. ensure_user_scp              — lookup or create ticket owner, get user_id
-    #   4. POST tickets.php?a=open      — create ticket, follow 302 for ticket_id
-    #   5. fetch_ticket_number_scp      — resolve visible ticket number
+    #   1. fetch_open_form_fields_scp   - CSRF, topicId, deptId, slaId
+    #   2. fetch_topic_form_fields_scp  - subject/message hex-hash field names
+    #   3. ensure_user_scp              - lookup or create ticket owner, get user_id
+    #   4. POST tickets.php?a=open      - create ticket, follow 302 for ticket_id
+    #   5. fetch_ticket_number_scp      - resolve visible ticket number
     #
     # @param base_uri [String] base path to osTicket
     # @param prefix   [String] portal prefix ('/scp')
