@@ -865,6 +865,8 @@ private
           case t[:url]
           when /^tcp/i
             c.include(::Msf::Payload::Linux::X64::MigrateTcp)
+          when /^fd/i
+            c.include(::Msf::Payload::Linux::X64::MigrateTcp)
           when /^http/i
             c.include(::Msf::Payload::Linux::X64::MigrateHttp)
           else
@@ -873,6 +875,8 @@ private
         when 'x86'
           case t[:url]
           when /^tcp/i
+            c.include(::Msf::Payload::Linux::X86::MigrateTcp)
+          when /^fd/i
             c.include(::Msf::Payload::Linux::X86::MigrateTcp)
           when /^http/i
             c.include(::Msf::Payload::Linux::X86::MigrateHttp)
@@ -1021,6 +1025,8 @@ private
 
     case url
     when /^tcp/i
+      scheme = 'tcp'
+    when /^fd/i
       scheme = 'tcp'
     when /^http/i
       scheme = 'http' # Covers HTTP and HTTPS
