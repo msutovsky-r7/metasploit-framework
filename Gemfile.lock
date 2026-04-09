@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    metasploit-framework (6.4.126)
+    metasploit-framework (6.4.127)
       aarch64
       abbrev
       actionpack (~> 7.2.0)
