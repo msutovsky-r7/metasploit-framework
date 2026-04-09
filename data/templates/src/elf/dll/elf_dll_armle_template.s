@@ -89,7 +89,6 @@ strtab:
  db 0
 strtabsz equ $ - strtab
 
- db 0x00, 0x00 ; add padding to honor 4-byte (word) alignment
-
+align 4
 global _start
 _start:
