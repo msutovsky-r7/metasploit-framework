@@ -30,7 +30,7 @@ module Msf::Util::EXE::Windows::X64
       # -----------------------------
       payload_length = code.bytesize
       payload = code.bytes.map { |b| "\\x%02x" % b }.join
-      template_path = File.join(Msf::Config.data_directory, 'templates','template_x64_windows.erb')
+      template_path = File.join(Msf::Config.data_directory, 'templates','template_x64_windows_xor.erb')
       erb = ERB.new(File.read(template_path))
       c_source = erb.result(binding)
       comp_obj = Metasploit::Framework::Compiler::Mingw::X64.new(opts)

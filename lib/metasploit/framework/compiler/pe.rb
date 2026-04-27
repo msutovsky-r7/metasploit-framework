@@ -12,11 +12,6 @@ module Metasploit
 
       class Pe
 
-        FILE_ALIGN = 0x200
-        SECT_ALIGN = 0x1000
-
-        MACHINE_AMD64 = 0x8664
-
         SUBSYSTEM_GUI = 2
         SUBSYSTEM_CUI = 3
 
@@ -49,7 +44,6 @@ module Metasploit
           "\x52\x69\x63\x68\x3A\x72\xE9\xF9"
         ).b.freeze
 
-      #  # Realistic e_lfanew values seen in the wild.
       #  # 0x80 = MSVC default, 0xB8 = some MinGW builds.
       PE_OFFSETS = [0x80, 0xB8].freeze
 
@@ -65,6 +59,7 @@ module Metasploit
           @imports = opts[:imports] || {}
           @text_name = opts[:text_name] || ['.text', 'CODE'].sample
           @rdata_name = opts[:rdata_name] || ['.rdata', '.idata'].sample
+          @file_alignment = 0x200;
         end
 
         def parse_data_directories(raw, offset, count)
@@ -123,7 +118,10 @@ module Metasploit
             SizeOfStackReserve SizeOfStackCommit SizeOfHeapReserve SizeOfHeapCommit
             LoaderFlags NumberOfRvaAndSizes
           ]
+
           @optional_header = keys.zip(optional_header_raw).to_h
+
+          @file_alignment = @optional_header[:FileAlignment]; 
 
           @optional_header[:DataDirectories] = parse_data_directories(raw, optional_header_offset + 112, @optional_header[:NumberOfRvaAndSizes])
 
@@ -164,7 +162,7 @@ module Metasploit
           # rounded up to FileAlignment. This is the only correct way — just adding the raw
           # e_lfanew delta doesn't guarantee the result stays FileAlignment-aligned.
           nt_headers_end = @e_lfanew + 4 + 20 + @file_header[:SizeOfOptionalHeader] + @file_header[:NumberOfSections] * 40
-          new_headers_size = align_up(nt_headers_end, FILE_ALIGN)
+          new_headers_size = align_up(nt_headers_end, @file_alignment);
 
           # File-offset delta: how much all PointerToRawData values must shift.
           # Both new_headers_size and orig_headers_size are FileAlignment multiples,
@@ -248,6 +246,7 @@ module Metasploit
         end
 
         
+        # TODO: the metasm PE doesn't have .idata section, which is not a problem itself, but imo looks kinda sus - add either fake idata section or .idata section based on existing import data
         def add_import_section
 
         end

