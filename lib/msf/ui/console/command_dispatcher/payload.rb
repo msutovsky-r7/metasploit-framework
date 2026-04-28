@@ -147,6 +147,8 @@ module Msf
           def cmd_generate(*args)
             # Parse the arguments
             encoder_name = nil
+            dynamic_template = nil
+            template_obfluscation = false 
             sled_size = nil
             pad_nops = nil
             sec_name = nil
@@ -210,14 +212,27 @@ module Msf
                 mod_with_opts.datastore.import_options_from_s(val)
               end
             end
+
             if encoder_name.nil? && mod_with_opts.datastore['ENCODER']
               encoder_name = mod_with_opts.datastore['ENCODER']
             end
+           
+            # Add dynamic templates
+            if dynamic_template.nil? && mod_with_opts.datastore['EXE::Template::Dynamic::Enabled']
+              dynamic_template = mod_with_opts.datastore['EXE::Template::Dynamic::Enabled']
+            end
+            
+            if !dynamic_template.nil? && mod_with_opts.datastore['EXE::Template::Dynamic::Obfuscation']
+              template_obfluscation = mod_with_opts.datastore['EXE::Template::Dynamic::Obfuscation']
+            end
+
 
             # Generate the payload
             begin
               buf = mod_with_opts.generate_simple(
                 'BadChars' => badchars,
+                'DynamicTemplate' => dynamic_template,
+                'TemplateObfluscation' => template_obfluscation,
                 'Encoder' => encoder_name,
                 'Format' => format,
                 'NopSledSize' => sled_size,

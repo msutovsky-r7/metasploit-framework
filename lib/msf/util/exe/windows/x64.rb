@@ -23,20 +23,12 @@ module Msf::Util::EXE::Windows::X64
       # Use the standard template if not specified by the user.
       # This helper finds the full path and stores it in opts[:template].
 
-      return Msf::Obfluscation::ExeTemplate.exe_template_compile(framework, code, opts) #if framework.datastore['EXE::Template::Dynamic::Enabled']
+      #NOTE: the stageless dynamic encoding takes too much time, figure out how to make it better
+
+      return Msf::Obfluscation::ExeTemplate.exe_template(framework, code, opts) if opts[:dynamic_template]
       
       set_template_default(opts, 'template_x64_windows.exe')
       
-      # -----------------------------
-      payload_length = code.bytesize
-      payload = code.bytes.map { |b| "\\x%02x" % b }.join
-      template_path = File.join(Msf::Config.data_directory, 'templates','template_x64_windows_xor.erb')
-      erb = ERB.new(File.read(template_path))
-      c_source = erb.result(binding)
-      comp_obj = Metasploit::Framework::Compiler::Mingw::X64.new(opts)
-      compiler_out = comp_obj.compile_c(c_source)
-      bin = Metasploit::Framework::Compiler::Windows.compile_c(c_source, :exe,Metasm::X86_64.new)
-      # -----------------------------
       # Try to inject code into executable by adding a section without affecting executable behavior
       if opts[:inject]
         injector = Msf::Exe::SegmentInjector.new({

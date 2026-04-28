@@ -63,7 +63,9 @@ module Payload
       :inject => opts['KeepTemplateWorking'],
       :template => opts['Template'],
       :template_path => opts['ExeDir'],
-      :secname => opts['SecName']
+      :secname => opts['SecName'],
+      :dynamic_obfuscation => opts['TemplateObfluscation'],
+      :dynamic_template => opts['DynamicTemplate']
     }
 
     arch = payload.arch

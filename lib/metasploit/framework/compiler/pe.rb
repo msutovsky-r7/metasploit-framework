@@ -3,7 +3,6 @@
 require 'metasm'
 require 'metasploit/framework/compiler/utils'
 require 'metasploit/framework/compiler/headers/windows'
-require 'metasploit/framework/compiler/windows'
 require 'rex/peparsey'
 
 module Metasploit
@@ -47,9 +46,6 @@ module Metasploit
       #  # 0x80 = MSVC default, 0xB8 = some MinGW builds.
       PE_OFFSETS = [0x80, 0xB8].freeze
 
-        def self.from_c(c_source, opts = {})
-          new(opts).build_from_c(c_source)
-        end
 
         def initialize(opts = {})
           @subsystem = opts[:subsystem] == :cui ? SUBSYSTEM_CUI : SUBSYSTEM_GUI
@@ -246,25 +242,23 @@ module Metasploit
         end
 
         
-        # TODO: the metasm PE doesn't have .idata section, which is not a problem itself, but imo looks kinda sus - add either fake idata section or .idata section based on existing import data
+        # TODO: the metasm PE doesn't have .idata section, which is not a problem it but imo looks kinda sus - add either fake idata section or .idata section based on existing import data
         def add_import_section
 
         end
 
-        def build_from_c(c_source)
+        def build_from_c(raw)
           # cpu     = Metasm::X86_64.new
           # headers = Compiler::Headers::Windows.new
           # source  = Compiler::Utils.normalize_code(c_source, headers)
           # pe      = Metasm::PE.compile_c(cpu, source)
           # raw     = pe.encode
-          
-          raw = Metasploit::Framework::Compiler::Windows.compile_c(c_source, :exe, Metasm::X86_64.new)
           load_pe(raw)
           
           # Do the magic
           #----------------
           patch_dos_header
-          add_import_section
+#          add_import_section
 
           #----------------
           new_raw = rebuild_pe
