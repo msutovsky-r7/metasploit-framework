@@ -172,19 +172,6 @@ module Metasploit
           orig_headers_size = oh[:SectionHeaders].first&.dig(:PointerToRawData) || oh[:SizeOfHeaders]
           file_offset_delta = new_headers_size - orig_headers_size
 
-          # DOS header (64 bytes) — e_lfanew updated to the new offset
-        #  out = [
-        #    @dos_header[:e_magic],
-        #    @dos_header[:e_cblp], @dos_header[:e_cp], @dos_header[:e_crlc],
-        #    @dos_header[:e_cparhdr], @dos_header[:e_minalloc], @dos_header[:e_maxalloc],
-        #    @dos_header[:e_ss], @dos_header[:e_sp], @dos_header[:e_csum],
-        #    @dos_header[:e_ip], @dos_header[:e_cs], @dos_header[:e_lfarlc],
-        #    @dos_header[:e_ovno], @dos_header[:e_res],
-        #    @dos_header[:e_oemid], @dos_header[:e_oeminfo],
-        #    @dos_header[:e_res2], @e_lfanew
-        #  ].pack('a2 S< S< S< S< S< S< S< S< S< S< S< S< S< a8 S< S< a20 l<')
-          
-
           out = [
             @dos_header[:e_magic],
             @dos_header[:e_cblp], @dos_header[:e_cp], @dos_header[:e_crlc],
@@ -271,7 +258,7 @@ module Metasploit
           # source  = Compiler::Utils.normalize_code(c_source, headers)
           # pe      = Metasm::PE.compile_c(cpu, source)
           # raw     = pe.encode
-
+          
           raw = Metasploit::Framework::Compiler::Windows.compile_c(c_source, :exe, Metasm::X86_64.new)
           load_pe(raw)
           
