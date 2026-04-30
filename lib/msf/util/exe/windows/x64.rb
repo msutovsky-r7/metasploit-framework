@@ -1,12 +1,14 @@
 require 'erb'
 require 'metasploit/framework/compiler/windows'
 require 'metasploit/framework/compiler/mingw'
+require 'pry'
+require 'pry-byebug'
 
 # -*- coding: binary -*-
 module Msf::Util::EXE::Windows::X64
   include Msf::Util::EXE::Common
   include Msf::Util::EXE::Windows::Common
-  include Msf::Obfluscation::ExeTemplate
+  include Msf::Obfuscation::ExeTemplate
 
   def self.included(base)
     base.extend(ClassMethods)
@@ -22,10 +24,7 @@ module Msf::Util::EXE::Windows::X64
     def to_win64pe(framework, code, opts = {})
       # Use the standard template if not specified by the user.
       # This helper finds the full path and stores it in opts[:template].
-
-      #NOTE: the stageless dynamic encoding takes too much time, figure out how to make it better
-
-      return Msf::Obfluscation::ExeTemplate.exe_template(framework, code, opts) if opts[:dynamic_template]
+      return Msf::Obfuscation::ExeTemplate.exe_template_x64_pe(framework, code, opts) if opts[:dynamic_template]
       
       set_template_default(opts, 'template_x64_windows.exe')
       
@@ -59,6 +58,7 @@ module Msf::Util::EXE::Windows::X64
     # @option           [String] :service_exe
     # @option           [String] :dll
     # @option           [String] :inject
+    # @option           [Boolen] :dynamic_template
     # @return           [String]
     def to_win64pe_service(framework, code, opts = {})
       # Allow the user to specify their own service EXE template
@@ -75,8 +75,13 @@ module Msf::Util::EXE::Windows::X64
     # @option           [String] :exe_type
     # @option           [String] :dll
     # @option           [String] :inject
+    # @option           [Boolen] :dynamic_template
     # @return           [String]
     def to_win64pe_dll(framework, code, opts = {})
+      
+      binding.pry
+      return Msf::Obfuscation::ExeTemplate.exe_template_x64_dll(framework, code, opts) if opts[:dynamic_template]
+    
       flavor = opts.fetch(:mixed_mode, false) ? 'mixed_mode' : nil
       set_template_default_winpe_dll(opts, ARCH_X64, code.size, flavor: flavor)
 

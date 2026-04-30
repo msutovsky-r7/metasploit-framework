@@ -148,7 +148,7 @@ module Msf
             # Parse the arguments
             encoder_name = nil
             dynamic_template = nil
-            template_obfluscation = false 
+            template_obfuscation = false 
             sled_size = nil
             pad_nops = nil
             sec_name = nil
@@ -223,7 +223,7 @@ module Msf
             end
             
             if !dynamic_template.nil? && mod_with_opts.datastore['EXE::Template::Dynamic::Obfuscation']
-              template_obfluscation = mod_with_opts.datastore['EXE::Template::Dynamic::Obfuscation']
+              template_obfuscation = mod_with_opts.datastore['EXE::Template::Dynamic::Obfuscation']
             end
 
 
@@ -232,7 +232,7 @@ module Msf
               buf = mod_with_opts.generate_simple(
                 'BadChars' => badchars,
                 'DynamicTemplate' => dynamic_template,
-                'TemplateObfluscation' => template_obfluscation,
+                'TemplateObfuscation' => template_obfuscation,
                 'Encoder' => encoder_name,
                 'Format' => format,
                 'NopSledSize' => sled_size,
@@ -246,7 +246,8 @@ module Msf
                 'Iterations' => iter,
                 'Verbose' => verbose
               )
-            rescue StandardError
+            rescue StandardError => e
+              puts e.backtrace
               log_error("Payload generation failed: #{$ERROR_INFO}")
               return false
             end

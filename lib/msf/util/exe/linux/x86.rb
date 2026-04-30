@@ -1,4 +1,6 @@
 # -*- coding: binary -*-
+require 'msf/core/obfuscation/exe_template'
+
 module Msf::Util::EXE::Linux::X86
   include Msf::Util::EXE::Common
   include Msf::Util::EXE::Linux::Common
@@ -19,6 +21,12 @@ module Msf::Util::EXE::Linux::X86
     # @option           [String] :template
     # @return           [String] Returns an elf
     def to_linux_x86_elf(framework, code, opts = {})
+      if opts[:dynamic_template]
+        opts[:arch]     = 'x86'
+        opts[:platform] = 'linux'
+        return Msf::Obfuscation::ExeTemplate.exe_template(framework, code, opts)
+      end
+
       default = true unless opts[:template]
 
       return to_exe_elf(framework, opts, "template_x86_linux.bin", code) if default

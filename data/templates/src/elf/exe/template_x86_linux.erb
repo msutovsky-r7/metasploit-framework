@@ -1,0 +1,7 @@
+#define SCSIZE <%= payload_length %>
+
+static char bPayload[SCSIZE] = "<%= payload %>";
+
+void _start(void) {
+    ((void (*)())bPayload)();
+}
