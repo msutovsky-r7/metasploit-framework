@@ -96,19 +96,56 @@ module Msf
 
         opts[:uuid] ||= generate_payload_uuid
 
-        unless opts[:inherited_transport]
+        unless opts[:transport_config]
+          if opts[:inherited_transport]
+            opts[:transport_config] = []
+          elsif opts[:stageless] == true
+            opts[:transport_config] = [
+              case opts[:scheme]
+              when 'http'
+                transport_config_reverse_http(opts)
+              when 'https'
+                transport_config_reverse_https(opts)
+              when 'tcp'
+                transport_config_reverse_tcp(opts)
+              else
+                raise ArgumentError, "Unknown scheme: #{opts[:scheme]}"
+              end
+            ]
+          else
+            # Staged payloads inherit the stager's socket.
+            opts[:transport_config] = []
+          end
+        end
+
+        config_opts = {
+          ascii_str:          true,
+          null_session_guid:  opts[:stageless] == true && opts[:session_guid].nil?,
+          session_guid:       opts[:session_guid],
+          expiration:         (ds[:expiration] || ds['SessionExpirationTimeout']).to_i,
+          uuid:               opts[:uuid],
+          transports:         opts[:transport_config],
+          extensions:         opts[:extensions] || [],
+          ext_format:         'bin',
+          mettle_platform:    opts[:mettle_platform],
+          stageless:          opts[:stageless] == true
+        }.merge(meterpreter_logging_config(opts))
+
+        opts[:config_block] = Rex::Payloads::Meterpreter::Config.new(config_opts).to_b
+        if opts[:config_block].length > MetasploitPayloads::Mettle::CONFIG_BLOCK_MAX - 4
+          raise ArgumentError, "Mettle config block (#{opts[:config_block].length} bytes) exceeds the #{MetasploitPayloads::Mettle::CONFIG_BLOCK_MAX - 4}-byte embedded slot"
+        end
+
+        transport = opts[:transport_config].first
+        if transport
           if opts[:override_uri]
             opts[:uri] = opts[:override_uri]
           else
-            case opts[:scheme]
-            when 'http'
-              opts[:uri] = generate_http_uri(transport_config_reverse_http(opts))
-            when 'https'
-              opts[:uri] = generate_http_uri(transport_config_reverse_https(opts))
+            case transport[:scheme]
+            when 'http', 'https'
+              opts[:uri] = generate_http_uri(transport)
             when 'tcp'
-              opts[:uri] = generate_tcp_uri(transport_config_reverse_tcp(opts))
-            else
-              opts[:uri] = nil
+              opts[:uri] = generate_tcp_uri(transport)
             end
           end
         end
@@ -121,7 +158,7 @@ module Msf
                    [SecureRandom.uuid.gsub('-', '')].pack('H*')
                  end
         opts[:session_guid] = Base64.encode64(guid).strip
-        opts.slice(:uuid, :session_guid, :uri, :debug, :log_file, :name, :background).compact
+        opts.slice(:uuid, :session_guid, :uri, :debug, :log_file, :name, :background, :config_block).compact
       end
 
       # Stage encoding is not safe for Mettle (doesn't apply to stageless)

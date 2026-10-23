@@ -55,7 +55,9 @@ private
 
     # if no session guid is given then we'll just pass the blank
     # guid through. this is important for stageless payloads
-    if opts[:stageless] == true || opts[:null_session_guid] == true
+    if opts[:session_guid]
+      session_guid = opts[:session_guid]
+    elsif opts[:stageless] == true || opts[:null_session_guid] == true
       session_guid = "\x00" * 16
     else
       session_guid = [SecureRandom.uuid.gsub('-', '')].pack('H*')
@@ -76,6 +78,11 @@ private
   end
 
   def add_c2_tlv(tlv, opts)
+    if opts[:c2_tlv]
+      tlv.tlvs << opts[:c2_tlv]
+      return
+    end
+
     lhost = opts[:lhost]
     if lhost && opts[:scheme].start_with?('http') && Rex::Socket.is_ipv6?(lhost)
       lhost = "[#{lhost}]"
