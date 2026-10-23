@@ -155,6 +155,7 @@ class ClientCore < Extension
       # TLV_TYPE_C2_UUID_COOKIE, TLV_TYPE_C2_UUID_GET, TLV_TYPE_C2_UUID_HEADER
       # Not sure if this stuff is useful for this display though.
       result[:transports] << {
+        :c2_tlv         => t,
         :url            => t.get_tlv_value(TLV_TYPE_C2_URL),
         :comm_timeout   => t.get_tlv_value(TLV_TYPE_C2_COMM_TIMEOUT),
         :retry_total    => t.get_tlv_value(TLV_TYPE_C2_RETRY_TOTAL),
@@ -660,8 +661,9 @@ class ClientCore < Extension
       unless transport && transport[:url]
         raise RuntimeError, 'Unable to determine the current transport', caller
       end
+
       linux_migration = client.platform == 'linux'
-      transport_type = migrate_transport(transport[:url])
+      transport_type = linux_migration ? migrate_transport(transport[:url]) : nil
       if linux_migration && transport_type == :socket
         validate_linux_socket_migration_target!(current_process, target_process)
       end
@@ -692,23 +694,11 @@ class ClientCore < Extension
       # of 60 seconds.
       timeout = [(opts[:timeout] || 0), 60].max
       linux_socket_handoff = linux_migration && transport_type == :socket
-      passive_linux_reconnect = linux_migration &&
-                                client.passive_service &&
-                                transport_type == :reconnect
-      if passive_linux_reconnect
-        # A reconnecting Mettle stops its old event loop after queueing the
-        # response, so the passive HTTP transport cannot reliably return it.
-        # Queue the request and let the new instance attach before continuing.
-        client.send_packet(request)
-        ::IO.select(nil, nil, nil, 5.0)
-      else
-        client.send_request(request, timeout)
-      end
+      client.send_request(request, timeout)
 
-      # Mettle's migration response only confirms that the target was injected.
-      # For socket transports, the source Mettle remains alive briefly after
-      # sending that response. Let it exit before negotiating encryption so the
-      # request can only be handled by the migrated instance.
+      # Mettle does not send the response until the injected child has registered
+      # its APIs and established C2. Let the source finish flushing that response
+      # before negotiating encryption over a handed-off socket.
       ::IO.select(nil, nil, nil, 1.0) if linux_socket_handoff
 
       client.payload_uuid.arch = target_arch if current_arch != target_arch
@@ -719,9 +709,9 @@ class ClientCore < Extension
       client.tlv_enc_key = nil
 
       if client.passive_service
-        # Sleep for 5 seconds to allow the full handoff, this prevents
-        # the original process from stealing our loadlib requests
-        ::IO.select(nil, nil, nil, 5.0) unless passive_linux_reconnect
+        # Give a reconnecting source time to flush its response and stop polling
+        # before issuing commands to the child.
+        ::IO.select(nil, nil, nil, 1.0) if linux_migration
       elsif client.pivot_session.nil?
         # Prevent new commands from being sent while we finish migrating
         client.comm_mutex.synchronize do
@@ -897,7 +887,7 @@ private
       end
 
       stub = c.new.generate
-    elsif client.platform == 'linux' && [ARCH_X86, ARCH_X64].include?(client.arch)
+    elsif client.platform == 'linux' && [ARCH_X86, ARCH_X64].include?(normalize_migrate_arch(client.arch))
       c = Class.new(::Msf::Payload)
 
       case [normalize_migrate_arch(target_process['arch']), migrate_transport(transport[:url])]
@@ -915,7 +905,7 @@ private
 
       stub = c.new.generate(payload: payload)
     else
-      raise "Unsupported session #{client.session_type}"
+      raise RuntimeError, "Unsupported session #{client.session_type}", caller
     end
 
     stub
@@ -1105,7 +1095,7 @@ private
       debug: client.debug_build ? 3 : nil
     }
     if migrate_transport(transport[:url]) == :reconnect
-      image_options[:override_uri] = transport[:url]
+      image_options[:transport_config] = [transport]
     else
       image_options[:inherited_transport] = true
     end

